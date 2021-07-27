@@ -1,18 +1,24 @@
-/*
- * Project slave
- * Description:
- * Author:
- * Date:
- */
+SYSTEM_MODE(MANUAL)
 
-// setup() runs once, when the device is first turned on.
+int address = 0x20;
+
 void setup() {
-  // Put initialization like pinMode and begin functions here.
-
+  Serial.begin(9600);
+  Wire.begin(address);
+  Wire.onReceive(dataReceived);
+  Wire.onRequest(dataRequest);
 }
 
-// loop() runs over and over again, as quickly as it can execute.
 void loop() {
-  // The core of your code will likely live here.
+  Serial.println(Wire.available());
+  delay(100);
+}
 
+void dataReceived(int count){
+  Serial.println("data received");
+}
+
+void dataRequest(){
+  Serial.println("request received");
+  Wire.write(address);
 }

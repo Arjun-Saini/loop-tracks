@@ -1,18 +1,41 @@
-/*
- * Project master
- * Description:
- * Author:
- * Date:
- */
+SYSTEM_MODE(MANUAL)
 
-// setup() runs once, when the device is first turned on.
+int slaveCountExpected = 1;
+int slaveCount;
+
 void setup() {
-  // Put initialization like pinMode and begin functions here.
-
+  Serial.begin(9600);
+  Wire.begin();
 }
 
-// loop() runs over and over again, as quickly as it can execute.
 void loop() {
-  // The core of your code will likely live here.
+  Wire.beginTransmission(0x20);
+  Wire.write("transmission");
+  Wire.endTransmission();
 
+  Wire.requestFrom(0x20, 7);
+  Serial.println(Wire.available());
+  delay(500);
+}
+
+void randomizeAddress(){
+  byte transmission;
+  while(slaveCount != slaveCountExpected){
+    //scan through each i2c address
+    slaveCount = 0;
+    for(int i = 0x08; i <= 0x77; i++){
+      Wire.requestFrom(i, 1);
+      if(Wire.available()){
+        transmission = Wire.read();
+        if(i == transmission){
+          slaveCount++;
+        }
+      }
+    }
+
+    //randomize addresses on conflict
+    if(slaveCount != slaveCountExpected){
+
+    }
+  }
 }
