@@ -6,5 +6,6 @@
         "*.ino": "cpp"
     },
     "particle.firmwareVersion": "1.5.2",
-    "particle.targetPlatform": "xenon"
+    "particle.targetPlatform": "argon",
+    "particle.targetDevice": ""
 }
