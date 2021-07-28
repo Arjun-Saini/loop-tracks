@@ -4,6 +4,7 @@ int address;
 int requestMode = 0;
 bool verifyAddress = false;
 String deviceID = System.deviceID();
+bool blink = false;
 
 void setup() {
   Serial.begin(9600);
@@ -11,9 +12,17 @@ void setup() {
   Wire.begin(address);
   Wire.onReceive(dataReceived);
   Wire.onRequest(dataRequest);
+
+  pinMode(D7, OUTPUT);
 }
 
 void loop() {
+  if(blink){
+    digitalWrite(D7, HIGH);
+    delay(500);
+    digitalWrite(D7, LOW);
+    delay(500);
+  }
   delay(100);
 }
 
@@ -41,6 +50,10 @@ void dataReceived(int count){
     requestMode = 1;
   }else if(inputBuffer[0] == '2'){
     requestMode = 2;
+  }else if(inputBuffer[0] == '3'){
+    blink = true;
+  }else if(inputBuffer[0] == '4'){
+    blink = false;
   }else{
     for(int i = 0; i < 24; i++){
       if(deviceID.charAt(i) != inputBuffer[i]){
