@@ -12,12 +12,15 @@
 void setup();
 void loop();
 void randomizeAddress();
+hal_i2c_config_t acquireWireBuffer();
 #line 6 "c:/Users/Arjun/Documents/GitHub/loop_tracks/master/src/master.ino"
 #define RED_LINE_VERTICAL 55
-#define RED_LINE_HORIZONTAL 16
+#define RED_LINE_HORIZONTAL 17
 #define NUMPIXELS RED_LINE_VERTICAL + RED_LINE_HORIZONTAL
 
-const int slaveCountExpected = 3;
+constexpr size_t I2C_BUFFER_SIZE = 512;
+
+const int slaveCountExpected = 1;
 int addressArr[slaveCountExpected];
 int sequenceArr[slaveCountExpected];
 int slaveCount, bleCount;
@@ -60,15 +63,13 @@ void setup() {
   data.appendServiceUUID(serviceUuid);
   BLE.advertise(&data);
 
+  acquireWireBuffer();
   Wire.begin();
-  //randomizeAddress();
+  randomizeAddress();
 
   request.hostname = "lapi.transitchicago.com";
   request.port = 80;
   request.path = "/api/1.0/ttpositions.aspx?key=00ff09063caa46748434d5fa321d048f&rt=red&outputType=JSON";
-
-  strip.begin();
-  strip.show();
 }
 
 uint32_t brightRed = 0xFF0000;
@@ -120,25 +121,42 @@ void loop() {
     count++;
   }
 
-  for(int i = 0; i < NUMPIXELS; i++){
-    strip.setPixelColor(i, 0);
-  }
+  Wire.beginTransmission(addressArr[0]);
 
   for(int i = 0; i < arraySize(redLineOutput); i++){
-    if(redLineOutput[i] == 1){
-      strip.setPixelColor(i - 1, red);
-      strip.setPixelColor(i, red);
-      strip.setPixelColor(i + 1, brightRed);
-    }else if(redLineOutput[i] == 5){
-      strip.setPixelColor(i - 1, brightRed);
-      strip.setPixelColor(i, red);
-      strip.setPixelColor(i + 1, red);
+    switch(redLineOutput[i]){
+      case 0:{
+        Wire.write('0');
+        break;
+      }
+      case 1:{
+        Wire.write('1');
+        break;
+      }
+      case 5:{
+        Wire.write('5');
+        break;
+      }
     }
     redLineOutput[i] = 0;
   }
+  Wire.endTransmission();
 
-  strip.show();
-  //delay(5000);
+  // for(int i = 0; i < arraySize(redLineOutput); i++){
+  //   if(redLineOutput[i] == 1){
+  //     strip.setPixelColor(i - 1, red);
+  //     strip.setPixelColor(i, red);
+  //     strip.setPixelColor(i + 1, brightRed);
+  //   }else if(redLineOutput[i] == 5){
+  //     strip.setPixelColor(i - 1, brightRed);
+  //     strip.setPixelColor(i, red);
+  //     strip.setPixelColor(i + 1, red);
+  //   }
+  //   redLineOutput[i] = 0;
+  // }
+
+  //strip.show();
+  delay(5000);
 }
 
 //clears up conflicts with multiple i2c slaves having the same address
@@ -252,4 +270,16 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
   }
 
   bleCount++;
+}
+
+hal_i2c_config_t acquireWireBuffer() {
+    hal_i2c_config_t config = {
+        .size = sizeof(hal_i2c_config_t),
+        .version = HAL_I2C_CONFIG_VERSION_1,
+        .rx_buffer = new (std::nothrow) uint8_t[I2C_BUFFER_SIZE],
+        .rx_buffer_size = I2C_BUFFER_SIZE,
+        .tx_buffer = new (std::nothrow) uint8_t[I2C_BUFFER_SIZE],
+        .tx_buffer_size = I2C_BUFFER_SIZE
+    };
+    return config;
 }
