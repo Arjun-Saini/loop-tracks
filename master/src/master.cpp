@@ -3,14 +3,20 @@
 /******************************************************/
 
 #include "Particle.h"
-#line 1 "e:/IoT/loop-tracks/master/src/master.ino"
+#line 1 "c:/Users/Arjun/Documents/GitHub/loop_tracks/master/src/master.ino"
 #include "HttpClient.h"
 #include "JsonParserGeneratorRK.h"
+#include "math.h"
+#include "dotstar.h"
 
 void setup();
 void loop();
 void randomizeAddress();
-#line 4 "e:/IoT/loop-tracks/master/src/master.ino"
+#line 6 "c:/Users/Arjun/Documents/GitHub/loop_tracks/master/src/master.ino"
+#define RED_LINE_VERTICAL 55
+#define RED_LINE_HORIZONTAL 16
+#define NUMPIXELS RED_LINE_VERTICAL + RED_LINE_HORIZONTAL
+
 const int slaveCountExpected = 3;
 int addressArr[slaveCountExpected];
 int sequenceArr[slaveCountExpected];
@@ -33,13 +39,14 @@ http_header_t headers[] = {
 http_request_t request;
 http_response_t response;
 
-String redLineStations[] = {"Howard", "Jarvis", "Morse", "Loyola", "Granville", "Thorndale", "Bryn Mawr", "Berwyn", "Argyle", "Lawrence", "Wilson", 
-"Sheridan", "Addison", "Belmont", "Fullerton", "North/Clybourn", "Clark/Divison", "Chicago", "Grand", "Lake", "Monroe", "Jackson", "Harrison", 
-"Roosevelt", "Cermak-Chinatown", "Sox-35th", "47th", "Garfield", "63rd", "69th", "79th", "87th", "95th/Dan Ryan"};
-String redLineOutput[arraySize(redLineStations) * 8];
+String redLineStations[] = {"North/Clybourn", "Clark/Divison", "Chicago", "Grand", "Lake", "Monroe", "Jackson", "Harrison", 
+"Roosevelt", "Cermak-Chinatown"};
+int redLineOutput[RED_LINE_VERTICAL + RED_LINE_HORIZONTAL];
 
 HttpClient http;
 JsonParserStatic<10000, 1000> parser;
+
+Adafruit_DotStar strip = Adafruit_DotStar(NUMPIXELS);
 
 void setup() {
   Serial.begin(9600);
@@ -59,15 +66,16 @@ void setup() {
   request.hostname = "lapi.transitchicago.com";
   request.port = 80;
   request.path = "/api/1.0/ttpositions.aspx?key=00ff09063caa46748434d5fa321d048f&rt=red&outputType=JSON";
+
+  strip.begin();
+  strip.show();
 }
+
+uint32_t brightRed = 0xFF0000;
+uint32_t red = 0x0A0000;
 
 void loop() {
   http.get(request, response, headers);
-  // Serial.print("Application>\tResponse status: ");
-  // Serial.println(response.status);
-
-  // Serial.print("Application>\tHTTP Response Body: ");
-  // Serial.println(response.body);
 
   parser.clear();
 	parser.addString(response.body);
@@ -78,38 +86,59 @@ void loop() {
   
   //loop through each train, loop breaks when all trains have been parsed
   int count = 0;
+  bool validTrain = false;
   while(true){
     JsonReference train = parser.getReference().key("ctatt").key("route").index(0).key("train").index(count);
     String nextStation = train.key("nextStaNm").valueString();
     String trainDir = train.key("trDr").valueString();
-    int currentTime = train.key("prdt").valueString().substring(14, 16).toInt();
-    int predictedTime = train.key("arrT").valueString().substring(14, 16).toInt();
-    int timeDiff = predictedTime -  currentTime;
-    //Serial.println(timeDiff);
+    float lat = train.key("lat").valueString().toFloat();
+    float lon = train.key("lon").valueString().toFloat();
+    int pos;
 
     if(nextStation.length() <= 1){
       break;
     }
-    for(int i = 0; i < arraySize(redLineStations); i++){
-      if(nextStation == redLineStations[i]){
-        if(trainDir == "1"){
-          redLineOutput[i * 8 + timeDiff * 2] = "<";
-        }else{
-          redLineOutput[i * 8 + 1 + 2 * (3 - timeDiff)] = ">";
-        }
-      }
+
+    if(lat < 41.89950 && lat > 41.853206){
+      //Serial.print("lower vertical: ");
+      pos = (int) (RED_LINE_VERTICAL * (lat - 41.853206) / (41.89950 - 41.853206) + 0.5);
+      //Serial.println(pos);
+      validTrain = true;
+    }else if(lat > 41.89950 && lon < -87.628176 && lat < 41.910655){
+      //Serial.print("horizontal: ");
+      pos = (int) (RED_LINE_HORIZONTAL * (lon - -87.628176) / (-87.649177 - -87.628176) + 0.5) + RED_LINE_VERTICAL;
+      //Serial.println(pos);
+      validTrain = true;
     }
+    if(trainDir == "1" && validTrain){
+      redLineOutput[pos] = 1;
+    }else if(trainDir == "5" && validTrain){
+      redLineOutput[pos] = 5;
+    }
+
+    validTrain = false;
     count++;
   }
-  for(int i = 0; i < arraySize(redLineOutput); i++){
-    if(i % 8 == 0){
-      Serial.print("|");
-    }
-    Serial.print(redLineOutput[i]);
-    redLineOutput[i] = "-";
+
+  for(int i = 0; i < NUMPIXELS; i++){
+    strip.setPixelColor(i, 0);
   }
-  Serial.println("\n");
-  delay(5000);
+
+  for(int i = 0; i < arraySize(redLineOutput); i++){
+    if(redLineOutput[i] == 1){
+      strip.setPixelColor(i - 1, red);
+      strip.setPixelColor(i, red);
+      strip.setPixelColor(i + 1, brightRed);
+    }else if(redLineOutput[i] == 5){
+      strip.setPixelColor(i - 1, brightRed);
+      strip.setPixelColor(i, red);
+      strip.setPixelColor(i + 1, red);
+    }
+    redLineOutput[i] = 0;
+  }
+
+  strip.show();
+  //delay(5000);
 }
 
 //clears up conflicts with multiple i2c slaves having the same address
@@ -204,10 +233,19 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
   }
 
   if(bleCount == slaveCountExpected){
+    delay(1000);
     Serial.println("\nSequence: ");
     for(int i = 0; i < slaveCountExpected; i++){
       Serial.print(sequenceArr[i]);
       Serial.print(", ");
+
+      Wire.beginTransmission(sequenceArr[i]);
+      Wire.write('3');
+      Wire.endTransmission();
+      delay(2000);
+      Wire.beginTransmission(sequenceArr[i]);
+      Wire.write('4');
+      Wire.endTransmission();
     }
     //BLE.disconnect();
     //BLE.off();
