@@ -14,6 +14,7 @@ void setup();
 void loop();
 void randomizeAddress();
 hal_i2c_config_t acquireWireBuffer();
+
 #line 6 "/Users/sainihome/Documents/GitHub/loop-tracks/master/src/master.ino"
 class Checkpoint{
   public:
