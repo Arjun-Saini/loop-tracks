@@ -3,20 +3,33 @@
 /******************************************************/
 
 #include "Particle.h"
-#line 1 "c:/Users/Arjun/Documents/GitHub/loop_tracks/master/src/master.ino"
+#line 1 "/Users/sainihome/Documents/GitHub/loop-tracks/master/src/master.ino"
 #include "HttpClient.h"
 #include "JsonParserGeneratorRK.h"
 #include "math.h"
 #include "dotstar.h"
 
+float getDistance(float trainLat, float trainLon);
 void setup();
 void loop();
 void randomizeAddress();
 hal_i2c_config_t acquireWireBuffer();
-#line 6 "c:/Users/Arjun/Documents/GitHub/loop_tracks/master/src/master.ino"
-#define RED_LINE_VERTICAL 55
-#define RED_LINE_HORIZONTAL 17
-#define NUMPIXELS RED_LINE_VERTICAL + RED_LINE_HORIZONTAL
+#line 6 "/Users/sainihome/Documents/GitHub/loop-tracks/master/src/master.ino"
+class Checkpoint{
+  public:
+  
+    float lat;
+    float lon;
+
+    Checkpoint(float la, float lo){
+      lat = la;
+      lon = lo;
+    }
+
+    float getDistance(float trainLat, float trainLon){
+      return sqrt(pow((trainLat - lat), 2) + pow((trainLon - lon), 2));
+    }
+};
 
 constexpr size_t I2C_BUFFER_SIZE = 512;
 
@@ -42,18 +55,15 @@ http_header_t headers[] = {
 http_request_t request;
 http_response_t response;
 
-String redLineStations[] = {"North/Clybourn", "Clark/Divison", "Chicago", "Grand", "Lake", "Monroe", "Jackson", "Harrison", 
-"Roosevelt", "Cermak-Chinatown"};
-int redLineOutput[RED_LINE_VERTICAL + RED_LINE_HORIZONTAL];
+Checkpoint redLineCheckpoints[] = {Checkpoint(41.853028, -87.63109), Checkpoint(41.9041, -87.628921), Checkpoint(41.903888, -87.639506), Checkpoint(41.913732, -87.652380), Checkpoint(41.924615, -87.716979)};
 
 HttpClient http;
 JsonParserStatic<10000, 1000> parser;
 
-Adafruit_DotStar strip = Adafruit_DotStar(NUMPIXELS);
-
 void setup() {
   Serial.begin(9600);
   delay(2000);
+
   BLE.on();
 
   BLE.addCharacteristic(txCharacteristic);
@@ -72,9 +82,6 @@ void setup() {
   request.path = "/api/1.0/ttpositions.aspx?key=00ff09063caa46748434d5fa321d048f&rt=red&outputType=JSON";
 }
 
-uint32_t brightRed = 0xFF0000;
-uint32_t red = 0x0A0000;
-
 void loop() {
   http.get(request, response, headers);
 
@@ -87,7 +94,6 @@ void loop() {
   
   //loop through each train, loop breaks when all trains have been parsed
   int count = 0;
-  bool validTrain = false;
   while(true){
     JsonReference train = parser.getReference().key("ctatt").key("route").index(0).key("train").index(count);
     String nextStation = train.key("nextStaNm").valueString();
@@ -100,47 +106,17 @@ void loop() {
       break;
     }
 
-    if(lat < 41.89950 && lat > 41.853206){
-      //Serial.print("lower vertical: ");
-      pos = (int) (RED_LINE_VERTICAL * (lat - 41.853206) / (41.89950 - 41.853206) + 0.5);
-      //Serial.println(pos);
-      validTrain = true;
-    }else if(lat > 41.89950 && lon < -87.628176 && lat < 41.910655){
-      //Serial.print("horizontal: ");
-      pos = (int) (RED_LINE_HORIZONTAL * (lon - -87.628176) / (-87.649177 - -87.628176) + 0.5) + RED_LINE_VERTICAL;
-      //Serial.println(pos);
-      validTrain = true;
+    Serial.printf("Train %i: ", count);
+    int arrSize = sizeof(redLineCheckpoints) / sizeof(redLineCheckpoints[0]);
+    float checkpointDistances[arrSize];
+    for(int i = 0; i < arrSize; i++){
+      checkpointDistances[i] = redLineCheckpoints[i].getDistance(lat, lon);
     }
-    if(trainDir == "1" && validTrain){
-      redLineOutput[pos] = 1;
-    }else if(trainDir == "5" && validTrain){
-      redLineOutput[pos] = 5;
-    }
+    float* closestCheckpoint = std::min_element(checkpointDistances, checkpointDistances + arrSize);
+    Serial.println(closestCheckpoint - checkpointDistances);
 
-    validTrain = false;
     count++;
   }
-
-  Wire.beginTransmission(addressArr[0]);
-
-  for(int i = 0; i < arraySize(redLineOutput); i++){
-    switch(redLineOutput[i]){
-      case 0:{
-        Wire.write('0');
-        break;
-      }
-      case 1:{
-        Wire.write('1');
-        break;
-      }
-      case 5:{
-        Wire.write('5');
-        break;
-      }
-    }
-    redLineOutput[i] = 0;
-  }
-  Wire.endTransmission();
 
   // for(int i = 0; i < arraySize(redLineOutput); i++){
   //   if(redLineOutput[i] == 1){
