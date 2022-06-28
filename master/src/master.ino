@@ -1,14 +1,12 @@
 #include "HttpClient.h"
 #include "JsonParserGeneratorRK.h"
 #include "math.h"
-#include "neopixel.h"
 
 #define RED_NUM_PIXELS 40
 
 //checkpoints mark each turn on a line
 class Checkpoint{
   public:
-  
     float lat;
     float lon;
 
@@ -22,9 +20,40 @@ class Checkpoint{
     }
 };
 
+//container for all data for each rail line
+class Railway{
+  public:
+    std::vector<Checkpoint> checkpoints;
+    std::vector<float> distances;
+    std::vector<int> scalers;
+    std::vector<int> outputs;
+
+    Railway(std::vector<Checkpoint> checkpointInput, std::vector<int> scalerInput, int outputSize){
+      checkpoints = checkpointInput;
+      distances = std::vector<float>(checkpoints.size(), 0);
+      scalers = scalerInput;
+      outputs = std::vector<int>(outputSize, 0);
+    }
+};
+
+Railway redLine = Railway(
+  {Checkpoint(41.853028, -87.63109), Checkpoint(41.9041, -87.628921), Checkpoint(41.903888, -87.639506), Checkpoint(41.913732, -87.652380), Checkpoint(41.9253, -87.65286)},
+  {25, 3, 7, 5},
+  40
+);
+
+Railway blueLine = Railway(
+  {Checkpoint(41.853028, -87.63109), Checkpoint(41.9041, -87.628921), Checkpoint(41.903888, -87.639506), Checkpoint(41.913732, -87.652380), Checkpoint(41.9253, -87.65286)},
+  {25, 3, 7, 5},
+  40
+);
+
+std::vector<Railway> railways = {redLine, blueLine};
+
 constexpr size_t I2C_BUFFER_SIZE = 512;
 
-const int slaveCountExpected = 1;
+const int slaveCountExpected = 2;
+
 int addressArr[slaveCountExpected];
 int sequenceArr[slaveCountExpected];
 int slaveCount, bleCount;
@@ -46,14 +75,12 @@ http_header_t headers[] = {
 http_request_t request;
 http_response_t response;
 
-Checkpoint redLineCheckpoints[] = {Checkpoint(41.853028, -87.63109), Checkpoint(41.9041, -87.628921), Checkpoint(41.903888, -87.639506), Checkpoint(41.913732, -87.652380), Checkpoint(41.9253, -87.65286)};
-int redLineScalers[] = {25, 3, 7, 5}; //values should add up to RED_NUM_PIXELS
-int redLineOutput[RED_NUM_PIXELS];
+// Checkpoint redLineCheckpoints[] = {Checkpoint(41.853028, -87.63109), Checkpoint(41.9041, -87.628921), Checkpoint(41.903888, -87.639506), Checkpoint(41.913732, -87.652380), Checkpoint(41.9253, -87.65286)};
+// int redLineScalers[] = {25, 3, 7, 5}; //values should add up to RED_NUM_PIXELS
+// int redLineOutput[RED_NUM_PIXELS];
 
 HttpClient http;
 JsonParserStatic<10000, 1000> parser;
-
-Adafruit_NeoPixel strip(RED_NUM_PIXELS, D2, 0x02);
 
 void setup() {
   Serial.begin(9600);
@@ -70,19 +97,18 @@ void setup() {
 
   acquireWireBuffer();
   Wire.begin();
-  //randomizeAddress();
+  randomizeAddress();
 
   request.hostname = "lapi.transitchicago.com";
   request.port = 80;
   request.path = "/api/1.0/ttpositions.aspx?key=00ff09063caa46748434d5fa321d048f&rt=red&outputType=JSON";
-
-  strip.begin();
-  strip.show();
 }
 
 void loop() {
+  Serial.println("loop start");
   http.get(request, response, headers);
 
+  Serial.println("parsing");
   parser.clear();
 	parser.addString(response.body);
   if (!parser.parse()) {
@@ -91,118 +117,98 @@ void loop() {
 	}
   
   //loop through each train, loop breaks when all trains have been parsed
-  int count = 0;
-  while(true){
-    JsonReference train = parser.getReference().key("ctatt").key("route").index(0).key("train").index(count);
-    String nextStation = train.key("nextStaNm").valueString();
-    int trainDir = train.key("trDr").valueString().toInt();
-    float lat = train.key("lat").valueString().toFloat();
-    float lon = train.key("lon").valueString().toFloat();
+  for(int j = 0; j < railways.size(); j++){
+    int count = 0;
+    Railway currentRailway = railways.at(j);
+    std::vector<Checkpoint> currentCheckpoint = currentRailway.checkpoints;
+    while(true){
+      JsonReference train = parser.getReference().key("ctatt").key("route").index(j).key("train").index(count);
+      String nextStation = train.key("nextStaNm").valueString();
+      int trainDir = train.key("trDr").valueString().toInt();
+      float lat = train.key("lat").valueString().toFloat();
+      float lon = train.key("lon").valueString().toFloat();
 
-    if(nextStation.length() <= 1){
-      break;
-    }
-
-    //Serial.printf("Train %i: ", count);
-    int checkpointCount = sizeof(redLineCheckpoints) / sizeof(redLineCheckpoints[0]);
-    float checkpointDistances[checkpointCount];
-    for(int i = 0; i < checkpointCount; i++){
-      checkpointDistances[i] = redLineCheckpoints[i].getDistance(lat, lon);
-    }
-    float* closestCheckpoint = std::min_element(checkpointDistances, checkpointDistances + checkpointCount);
-    int closestIndex = closestCheckpoint - checkpointDistances;
-
-    //calculates which checkpoint is on the other side of the train from the nearest checkpoint, works when turns are 90 degrees or less
-    float x, x1, y, y1, slope;
-    int secondClosestIndex;
-
-    x = lat;
-    y = lon;
-    x1 = redLineCheckpoints[closestIndex].lat;
-    y1 = redLineCheckpoints[closestIndex].lon;
-
-    if(redLineCheckpoints[closestIndex].lat > lat){
-      slope = (y1 - y) / (x1 - x);
-    }else{
-      slope = (y - y1) / (x - x1);
-    }
-
-    bool pointSide, nearestSide;
-    bool validTrain = true;
-    if(closestIndex == 0){
-      pointSide = (-1 / slope * (redLineCheckpoints[closestIndex + 1].lat - x) + y) > redLineCheckpoints[closestIndex + 1].lon;
-      nearestSide = (-1 / slope * (redLineCheckpoints[closestIndex].lat - x) + y) > redLineCheckpoints[closestIndex].lon;
-      if(pointSide == nearestSide){
-        validTrain = false;
-      }else{
-        secondClosestIndex = 1;
+      if(nextStation.length() <= 1){
+        break;
       }
-    }else{
-      pointSide = (-1 / slope * (redLineCheckpoints[closestIndex - 1].lat - x) + y) > redLineCheckpoints[closestIndex - 1].lon;
-      nearestSide = (-1 / slope * (redLineCheckpoints[closestIndex].lat - x) + y) > redLineCheckpoints[closestIndex].lon;
-      if(closestIndex == checkpointCount - 1){
+
+      //Serial.printf("Train %i: ", count);
+      int checkpointCount = currentCheckpoint.size();
+      for(int i = 0; i < checkpointCount; i++){
+        currentRailway.distances.at(i) = currentCheckpoint.at(i).getDistance(lat, lon);
+      }
+      int closestIndex = std::min_element(currentRailway.distances.begin(), currentRailway.distances.end()) - currentRailway.distances.begin();
+
+      //calculates which checkpoint is on the other side of the train from the nearest checkpoint, works when turns are 90 degrees or less
+      float x, x1, y, y1, slope;
+      int secondClosestIndex;
+
+      x = lat;
+      y = lon;
+      x1 = currentCheckpoint.at(closestIndex).lat;
+      y1 = currentCheckpoint.at(closestIndex).lon;
+
+      if(currentCheckpoint.at(closestIndex).lat > lat){
+        slope = (y1 - y) / (x1 - x);
+      }else{
+        slope = (y - y1) / (x - x1);
+      }
+
+      bool pointSide, nearestSide;
+      bool validTrain = true;
+      if(closestIndex == 0){
+        pointSide = (-1 / slope * (currentCheckpoint.at(closestIndex + 1).lat - x) + y) > currentCheckpoint.at(closestIndex + 1).lon;
+        nearestSide = (-1 / slope * (currentCheckpoint.at(closestIndex).lat - x) + y) > currentCheckpoint.at(closestIndex).lon;
         if(pointSide == nearestSide){
           validTrain = false;
         }else{
-          secondClosestIndex = checkpointCount - 2;
+          secondClosestIndex = 1;
         }
       }else{
-        if(pointSide == nearestSide){
-          secondClosestIndex = closestIndex + 1;
+        pointSide = (-1 / slope * (currentCheckpoint.at(closestIndex - 1).lat - x) + y) > currentCheckpoint.at(closestIndex - 1).lon;
+        nearestSide = (-1 / slope * (currentCheckpoint.at(closestIndex).lat - x) + y) > currentCheckpoint.at(closestIndex).lon;
+        if(closestIndex == checkpointCount - 1){
+          if(pointSide == nearestSide){
+            validTrain = false;
+          }else{
+            secondClosestIndex = checkpointCount - 2;
+          }
         }else{
-          secondClosestIndex = closestIndex - 1;
+          if(pointSide == nearestSide){
+            secondClosestIndex = closestIndex + 1;
+          }else{
+            secondClosestIndex = closestIndex - 1;
+          }
         }
       }
-    }
-
-    float segmentPos;
-    if(validTrain){
-      if(closestIndex < secondClosestIndex){
-        segmentPos = checkpointDistances[closestIndex] / (checkpointDistances[closestIndex] + checkpointDistances[secondClosestIndex]);
-        segmentPos *= redLineScalers[closestIndex];
-        for(int i = 0; i < closestIndex; i++){
-          segmentPos += redLineScalers[i];
+      float segmentPos;
+      if(validTrain){
+        if(closestIndex < secondClosestIndex){
+          segmentPos = currentRailway.distances.at(closestIndex) / (currentRailway.distances.at(closestIndex) + currentRailway.distances.at(secondClosestIndex));
+          segmentPos *= currentRailway.scalers.at(closestIndex);
+          for(int i = 0; i < closestIndex; i++){
+            segmentPos += currentRailway.scalers.at(i);
+          }
+        }else{
+          segmentPos = currentRailway.distances.at(secondClosestIndex) / (currentRailway.distances.at(closestIndex) + currentRailway.distances.at(secondClosestIndex));
+          segmentPos *= currentRailway.scalers.at(secondClosestIndex);
+          for(int i = 0; i < secondClosestIndex; i++){
+            segmentPos += currentRailway.scalers.at(i);
+          }
         }
-      }else{
-        segmentPos = checkpointDistances[secondClosestIndex] / (checkpointDistances[closestIndex] + checkpointDistances[secondClosestIndex]);
-        segmentPos *= redLineScalers[secondClosestIndex];
-        for(int i = 0; i < secondClosestIndex; i++){
-          segmentPos += redLineScalers[i];
-        }
+        currentRailway.outputs.at((int)floor(segmentPos)) = trainDir;
+        //Serial.printlnf("%i, %i, %f", closestIndex, secondClosestIndex, segmentPos);
       }
-      redLineOutput[(int)floor(segmentPos)] = trainDir;
-      //Serial.printlnf("%i, %i, %f", closestIndex, secondClosestIndex, segmentPos);
+      count++;
     }
-
-    count++;
-  }
-  for(int i = 0; i < RED_NUM_PIXELS; i++){
-    Serial.print(redLineOutput[i]);
-    strip.setPixelColor(i, 0);
-    if(redLineOutput[i] == 1){
-      strip.setPixelColor(i, 0xFF0000);
-    }else if(redLineOutput[i] == 5){
-      strip.setPixelColor(i, 0x0000FF);
+    Wire.beginTransmission(addressArr[j]);
+    for(int i = 0; i < RED_NUM_PIXELS; i++){
+      Wire.write((char)currentRailway.outputs.at(i) + '0');
+      currentRailway.outputs.at(i) = 0;
     }
-    redLineOutput[i] = 0;
+    Wire.endTransmission();
   }
-  strip.show();
-  Serial.println();
 
-  // for(int i = 0; i < arraySize(redLineOutput); i++){
-  //   if(redLineOutput[i] == 1){
-  //     strip.setPixelColor(i - 1, red);
-  //     strip.setPixelColor(i, red);
-  //     strip.setPixelColor(i + 1, brightRed);
-  //   }else if(redLineOutput[i] == 5){
-  //     strip.setPixelColor(i - 1, brightRed);
-  //     strip.setPixelColor(i, red);
-  //     strip.setPixelColor(i + 1, red);
-  //   }
-  //   redLineOutput[i] = 0;
-  // }
-
-  //strip.show();
   delay(5000);
   Serial.println();
 }

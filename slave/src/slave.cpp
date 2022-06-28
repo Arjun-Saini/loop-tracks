@@ -3,15 +3,16 @@
 /******************************************************/
 
 #include "Particle.h"
-#line 1 "c:/Users/Arjun/Documents/GitHub/loop_tracks/slave/src/slave.ino"
-#include "dotstar.h"
+#line 1 "/Users/sainihome/Documents/GitHub/loop-tracks/slave/src/slave.ino"
+//#include "dotstar.h"
+#include "neopixel.h"
 
 void setup();
 void loop();
 void dataReceived(int count);
 void dataRequest();
 hal_i2c_config_t acquireWireBuffer();
-#line 3 "c:/Users/Arjun/Documents/GitHub/loop_tracks/slave/src/slave.ino"
+#line 4 "/Users/sainihome/Documents/GitHub/loop-tracks/slave/src/slave.ino"
 SYSTEM_MODE(MANUAL)
 
 int address;
@@ -19,7 +20,7 @@ int requestMode = 0;
 bool verifyAddress = false;
 String deviceID = System.deviceID();
 bool blink = false;
-Adafruit_DotStar strip = Adafruit_DotStar(72);
+Adafruit_NeoPixel strip(40, D2, 0x02);
 constexpr size_t I2C_BUFFER_SIZE = 512;
 
 uint32_t brightRed = 0xFF0000;
@@ -45,10 +46,9 @@ void loop() {
     digitalWrite(D7, LOW);
     delay(500);
   }
-  // for(int i = 0; i < 40; i++){
-  //   strip.setPixelColor(i, 0xFF0000);
-  // }
-  // strip.show();
+
+  strip.show();
+
   delay(100);
 }
 
@@ -59,8 +59,8 @@ void dataReceived(int count){
   char inputBuffer[size];
   int counter = 0;
 
-  Serial.println("count: ");
-  Serial.print(Wire.available());
+  Serial.print("count: ");
+  Serial.println(Wire.available());
   Serial.println();
 
   while(Wire.available() > 0){
@@ -101,8 +101,15 @@ void dataReceived(int count){
       requestMode = 0;
     }
   }else{
+    Serial.println("----------------");
+    Serial.println(Wire.available());
     for(int i = 0; i < size; i++){
-    if(inputBuffer[i] == '1'){
+      if(inputBuffer[i] == '0'){
+        strip.setPixelColor(i, 0);
+      }
+    }
+    for(int i = 0; i < size; i++){
+      if(inputBuffer[i] == '1'){
         strip.setPixelColor(i - 1, red);
         strip.setPixelColor(i, red);
         strip.setPixelColor(i + 1, brightRed);
@@ -111,10 +118,6 @@ void dataReceived(int count){
         strip.setPixelColor(i, red);
         strip.setPixelColor(i + 1, red);
       }
-    }
-    strip.show();
-    for(int i = 0; i < size; i++){
-      strip.setPixelColor(i, 0);
     }
   }
 }
