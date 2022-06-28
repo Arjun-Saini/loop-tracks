@@ -3,12 +3,21 @@
 #include "math.h"
 #include "dotstar.h"
 
-#define LINE_COUNT 2
-#define RED_LINE_VERTICAL 55
-#define RED_LINE_HORIZONTAL 17
-#define BLUE_LINE_UPPER_HORIZONTAL 33
-#define BLUE_LINE_VERTICAL 16
-#define BLUE_LINE_LOWER_HORIZONTAL 23
+class Checkpoint{
+  public:
+  
+    float lat;
+    float lon;
+
+    Checkpoint(float la, float lo){
+      lat = la;
+      lon = lo;
+    }
+
+    float getDistance(float trainLat, float trainLon){
+      return sqrt(pow((trainLat - lat), 2) + pow((trainLon - lon), 2));
+    }
+};
 
 constexpr size_t I2C_BUFFER_SIZE = 512;
 
@@ -34,8 +43,7 @@ http_header_t headers[] = {
 http_request_t request;
 http_response_t response;
 
-int redLineOutput[RED_LINE_VERTICAL + RED_LINE_HORIZONTAL];
-int blueLineOutput[BLUE_LINE_VERTICAL + BLUE_LINE_UPPER_HORIZONTAL + BLUE_LINE_LOWER_HORIZONTAL];
+Checkpoint redLineCheckpoints[] = {Checkpoint(41.853028, -87.63109), Checkpoint(41.9041, -87.628921), Checkpoint(41.903888, -87.639506), Checkpoint(41.913732, -87.652380), Checkpoint(41.924615, -87.716979)};
 
 HttpClient http;
 JsonParserStatic<10000, 1000> parser;
@@ -43,6 +51,7 @@ JsonParserStatic<10000, 1000> parser;
 void setup() {
   Serial.begin(9600);
   delay(2000);
+
   BLE.on();
 
   BLE.addCharacteristic(txCharacteristic);
@@ -61,103 +70,55 @@ void setup() {
   request.path = "/api/1.0/ttpositions.aspx?key=00ff09063caa46748434d5fa321d048f&rt=red&outputType=JSON";
 }
 
-uint32_t brightRed = 0xFF0000;
-uint32_t red = 0x0A0000;
-
 void loop() {
-  for(int i = 0; i < LINE_COUNT; i++){
-    // switch(i){
-    //   case 0:{
-    //     request.path = "/api/1.0/ttpositions.aspx?key=00ff09063caa46748434d5fa321d048f&rt=red&outputType=JSON";
-    //     break;
-    //   }
-    //   case 1:{
-    //     request.path = "/api/1.0/ttpositions.aspx?key=00ff09063caa46748434d5fa321d048f&rt=blue&outputType=JSON";
-    //     break;
-    //   }
-    // }
-    response.body = "";
-    http.get(request, response, headers);
-    Serial.println("------------------------------------------------------------");
-    Serial.println(response.body);
+  http.get(request, response, headers);
 
-    parser.clear();
-    parser.addString(response.body);
-    if (!parser.parse()) {
-      Serial.println("parsing failed on: ");
-      Serial.println(response.body);
-    }
-    
-    //loop through each train, loop breaks when all trains have been parsed
-    int count = 0;
-    bool validTrain = false;
-    while(true){
-      JsonReference train = parser.getReference().key("ctatt").key("route").index(0).key("train").index(count);
-      String nextStation = train.key("nextStaNm").valueString();
-      String trainDir = train.key("trDr").valueString();
-      float lat = train.key("lat").valueString().toFloat();
-      float lon = train.key("lon").valueString().toFloat();
-      int pos;
+  parser.clear();
+	parser.addString(response.body);
+  if (!parser.parse()) {
+		Serial.println("parsing failed");
+		return;
+	}
+  
+  //loop through each train, loop breaks when all trains have been parsed
+  int count = 0;
+  while(true){
+    JsonReference train = parser.getReference().key("ctatt").key("route").index(0).key("train").index(count);
+    String nextStation = train.key("nextStaNm").valueString();
+    String trainDir = train.key("trDr").valueString();
+    float lat = train.key("lat").valueString().toFloat();
+    float lon = train.key("lon").valueString().toFloat();
 
-      if(nextStation.length() <= 1){
-        break;
-      }
-
-      switch(i){
-        case 0:{
-          if(lat < 41.89950 && lat > 41.853206){
-            pos = (int) (RED_LINE_VERTICAL * (lat - 41.853206) / (41.89950 - 41.853206) + 0.5);
-            validTrain = true;
-          }else if(lat > 41.89950 && lon < -87.628176 && lat < 41.910655){
-            pos = (int) (RED_LINE_HORIZONTAL * (lon - -87.628176) / (-87.649177 - -87.628176) + 0.5) + RED_LINE_VERTICAL;
-            validTrain = true;
-          }
-          if(trainDir == "1" && validTrain){
-            redLineOutput[pos] = 1;
-            Serial.println(pos);
-          }else if(trainDir == "5" && validTrain){
-            redLineOutput[pos] = 5;
-            Serial.println(pos);
-          }
-          break;
-        }
-        case 1:{
-          if(lat < 41.878183 && lon < -87.631722 && lon > -87.725663){
-            pos = (int) (BLUE_LINE_LOWER_HORIZONTAL * (lon - -87.725663) / (-87.631722 - -87.725663) + 0.5);
-            validTrain = true;
-          }else if(lon > -87.631722 && lat < 41.885737 && lat > 41.875568){
-            pos = (int) (BLUE_LINE_VERTICAL * (lat - 41.875568) / (41.885737 - 41.875568) + 0.5) + BLUE_LINE_LOWER_HORIZONTAL;
-            validTrain = true;
-          }else if(lat > 41.883164 && lon < -87.630886 && lon > -87.677437){
-            pos = (int) (BLUE_LINE_UPPER_HORIZONTAL * (lon - -87.630886) / (-87.677437 - -87.630886) + 0.5) + BLUE_LINE_LOWER_HORIZONTAL + BLUE_LINE_VERTICAL;
-            validTrain = true;
-          }
-          if(trainDir == "1" && validTrain){
-            blueLineOutput[pos] = 1;
-          }else if(trainDir == "5" && validTrain){
-            blueLineOutput[pos] = 5;
-          }
-          break;
-        }
-      }
-
-      validTrain = false;
-      count++;
+    if(nextStation.length() <= 1){
+      break;
     }
 
-    Serial.println();
-    switch(i){
-      case 0:{
-        Wire.beginTransmission(addressArr[0]);
-        for(int i = 0; i < arraySize(redLineOutput); i++){
-          Wire.write(char(redLineOutput[i] + '0'));
-          redLineOutput[i] = 0;
-        }
-        Wire.endTransmission();
-        break;
-      }
+    Serial.printf("Train %i: ", count);
+    int arrSize = sizeof(redLineCheckpoints) / sizeof(redLineCheckpoints[0]);
+    float checkpointDistances[arrSize];
+    for(int i = 0; i < arrSize; i++){
+      checkpointDistances[i] = redLineCheckpoints[i].getDistance(lat, lon);
     }
+    float* closestCheckpoint = std::min_element(checkpointDistances, checkpointDistances + arrSize);
+    Serial.println(closestCheckpoint - checkpointDistances);
+
+    count++;
   }
+
+  // for(int i = 0; i < arraySize(redLineOutput); i++){
+  //   if(redLineOutput[i] == 1){
+  //     strip.setPixelColor(i - 1, red);
+  //     strip.setPixelColor(i, red);
+  //     strip.setPixelColor(i + 1, brightRed);
+  //   }else if(redLineOutput[i] == 5){
+  //     strip.setPixelColor(i - 1, brightRed);
+  //     strip.setPixelColor(i, red);
+  //     strip.setPixelColor(i + 1, red);
+  //   }
+  //   redLineOutput[i] = 0;
+  // }
+
+  //strip.show();
   delay(5000);
 }
 
