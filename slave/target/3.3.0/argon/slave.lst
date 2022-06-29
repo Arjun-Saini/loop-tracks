@@ -964,13 +964,13 @@ public:
         return spark_deviceID();
    b45c6:	4806      	ldr	r0, [pc, #24]	; (b45e0 <_GLOBAL__sub_I_SystemMode+0x30>)
    b45c8:	f000 fbc0 	bl	b4d4c <spark_deviceID>
-Adafruit_NeoPixel strip(40, D2, 0x02);
+Adafruit_NeoPixel strip(100, D2, 0x02);
    b45cc:	2302      	movs	r3, #2
    b45ce:	e8bd 4010 	ldmia.w	sp!, {r4, lr}
-Adafruit_NeoPixel strip(40, D2, 0x02);
+Adafruit_NeoPixel strip(100, D2, 0x02);
    b45d2:	4804      	ldr	r0, [pc, #16]	; (b45e4 <_GLOBAL__sub_I_SystemMode+0x34>)
    b45d4:	461a      	mov	r2, r3
-   b45d6:	2128      	movs	r1, #40	; 0x28
+   b45d6:	2164      	movs	r1, #100	; 0x64
    b45d8:	f000 b84a 	b.w	b4670 <_ZN17Adafruit_NeoPixelC1Ethh>
    b45dc:	2003e66c 	.word	0x2003e66c
    b45e0:	2003e680 	.word	0x2003e680

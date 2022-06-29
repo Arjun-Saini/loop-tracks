@@ -67,7 +67,8 @@
         "algorithm": "cpp",
         "functional": "cpp",
         "iterator": "cpp",
-        "utility": "cpp"
+        "utility": "cpp",
+        "*.tcc": "cpp"
     },
     "particle.targetPlatform": "argon",
     "particle.firmwareVersion": "3.3.0",

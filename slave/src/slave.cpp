@@ -20,7 +20,7 @@ int requestMode = 0;
 bool verifyAddress = false;
 String deviceID = System.deviceID();
 bool blink = false;
-Adafruit_NeoPixel strip(40, D2, 0x02);
+Adafruit_NeoPixel strip(100, D2, 0x02);
 constexpr size_t I2C_BUFFER_SIZE = 512;
 
 uint32_t headColor;
