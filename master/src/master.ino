@@ -27,25 +27,33 @@ class Railway{
     std::vector<float> distances;
     std::vector<int> scalers;
     std::vector<int> outputs;
+    String name;
+    std::vector<String> colors;
 
-    Railway(std::vector<Checkpoint> checkpointInput, std::vector<int> scalerInput, int outputSize){
+    Railway(std::vector<Checkpoint> checkpointInput, std::vector<int> scalerInput, int outputSize, String nameInput, std::vector<String> colorInput){
       checkpoints = checkpointInput;
       distances = std::vector<float>(checkpoints.size(), 0);
       scalers = scalerInput;
       outputs = std::vector<int>(outputSize, 0);
+      name = nameInput;
+      colors = colorInput;
     }
 };
 
 Railway redLine = Railway(
   {Checkpoint(41.853028, -87.63109), Checkpoint(41.9041, -87.628921), Checkpoint(41.903888, -87.639506), Checkpoint(41.913732, -87.652380), Checkpoint(41.9253, -87.65286)},
   {25, 3, 7, 5},
-  40
+  40,
+  "red",
+  {"FF0000", "0A0000"}
 );
 
 Railway blueLine = Railway(
   {Checkpoint(41.853028, -87.63109), Checkpoint(41.9041, -87.628921), Checkpoint(41.903888, -87.639506), Checkpoint(41.913732, -87.652380), Checkpoint(41.9253, -87.65286)},
   {25, 3, 7, 5},
-  40
+  40,
+  "blue",
+  {"0000FF", "00000A"}
 );
 
 std::vector<Railway> railways = {redLine, blueLine};
@@ -101,29 +109,33 @@ void setup() {
 
   request.hostname = "lapi.transitchicago.com";
   request.port = 80;
-  request.path = "/api/1.0/ttpositions.aspx?key=00ff09063caa46748434d5fa321d048f&rt=red&outputType=JSON";
 }
 
 void loop() {
   Serial.println("loop start");
-  http.get(request, response, headers);
-
-  Serial.println("parsing");
-  parser.clear();
-	parser.addString(response.body);
-  if (!parser.parse()) {
-		Serial.println("parsing failed");
-		return;
-	}
   
   //loop through each train, loop breaks when all trains have been parsed
   for(int j = 0; j < railways.size(); j++){
+    delay(1000);
+    request.path = "/api/1.0/ttpositions.aspx?key=00ff09063caa46748434d5fa321d048f&rt=" + railways.at(j).name + "&outputType=JSON";
+    http.get(request, response, headers);
+    //Serial.println(response.body);
+
+    Serial.println("parsing");
+    parser.clear();
+    parser.addString(response.body);
+    if (!parser.parse()) {
+      Serial.println("parsing failed");
+      return;
+    }
+
     int count = 0;
     Railway currentRailway = railways.at(j);
     std::vector<Checkpoint> currentCheckpoint = currentRailway.checkpoints;
     while(true){
-      JsonReference train = parser.getReference().key("ctatt").key("route").index(j).key("train").index(count);
+      JsonReference train = parser.getReference().key("ctatt").key("route").index(0).key("train").index(count);
       String nextStation = train.key("nextStaNm").valueString();
+      Serial.println(nextStation);
       int trainDir = train.key("trDr").valueString().toInt();
       float lat = train.key("lat").valueString().toFloat();
       float lon = train.key("lon").valueString().toFloat();
@@ -271,6 +283,13 @@ void randomizeAddress(){
       Serial.print(", ");
 
       addressArr[count] = i;
+      
+      //send color data
+      Wire.beginTransmission(i);
+      Wire.write(railways.at(count).colors.at(0));
+      Wire.write(railways.at(count).colors.at(1));
+      Wire.endTransmission();
+
       count++;
     }
   }

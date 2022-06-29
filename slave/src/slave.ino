@@ -11,8 +11,8 @@ bool blink = false;
 Adafruit_NeoPixel strip(40, D2, 0x02);
 constexpr size_t I2C_BUFFER_SIZE = 512;
 
-uint32_t brightRed = 0xFF0000;
-uint32_t red = 0x0A0000;
+uint32_t headColor;
+uint32_t tailColor;
 
 void setup() {
   Serial.begin(9600);
@@ -88,9 +88,18 @@ void dataReceived(int count){
       Wire.onRequest(dataRequest);
       requestMode = 0;
     }
+  }else if(size == 12){
+    std::string headBuffer = "";
+    std::string tailBuffer = "";
+    for(int i = 0; i < 6; i++){
+      headBuffer += inputBuffer[i];
+    }
+    for(int i = 6; i < 12; i++){
+      tailBuffer += inputBuffer[i];
+    }
+    headColor = std::stoul(headBuffer, nullptr, 16);
+    tailColor = std::stoul(tailBuffer, nullptr, 16);
   }else{
-    Serial.println("----------------");
-    Serial.println(Wire.available());
     for(int i = 0; i < size; i++){
       if(inputBuffer[i] == '0'){
         strip.setPixelColor(i, 0);
@@ -98,13 +107,13 @@ void dataReceived(int count){
     }
     for(int i = 0; i < size; i++){
       if(inputBuffer[i] == '1'){
-        strip.setPixelColor(i - 1, red);
-        strip.setPixelColor(i, red);
-        strip.setPixelColor(i + 1, brightRed);
+        strip.setPixelColor(i - 1, tailColor);
+        strip.setPixelColor(i, tailColor);
+        strip.setPixelColor(i + 1, headColor);
       }else if(inputBuffer[i] == '5'){
-        strip.setPixelColor(i - 1, brightRed);
-        strip.setPixelColor(i, red);
-        strip.setPixelColor(i + 1, red);
+        strip.setPixelColor(i - 1, headColor);
+        strip.setPixelColor(i, tailColor);
+        strip.setPixelColor(i + 1, tailColor);
       }
     }
   }
