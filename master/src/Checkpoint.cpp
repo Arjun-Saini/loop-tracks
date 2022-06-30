@@ -7,10 +7,6 @@ class Checkpoint{
     float lat;
     float lon;
 
-    Checkpoint *next = nullptr;
-    Checkpoint *prev = nullptr;
-    Checkpoint *extra = nullptr;
-
     Checkpoint(float la, float lo){
       lat = la;
       lon = lo;
