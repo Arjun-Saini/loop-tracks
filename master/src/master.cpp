@@ -76,7 +76,7 @@ std::vector<Railway> railways;
 
 constexpr size_t I2C_BUFFER_SIZE = 512;
 
-const int slaveCountExpected = 2;
+const int slaveCountExpected = 3;
 
 int addressArr[slaveCountExpected];
 int sequenceArr[slaveCountExpected];
@@ -127,7 +127,7 @@ void setup() {
   orangeLine.setLoopIndex(2, 6);
   purpleLine.setLoopIndex(4, 0);
   pinkLine.setLoopIndex(3, 7);
-  railways = {orangeLine, pinkLine};
+  railways = {redLine, brownLine, purpleLine};
 
   randomizeAddress();
 }
@@ -154,14 +154,24 @@ void loop() {
       Railway currentRailway = railways.at(j);
       std::vector<Checkpoint> currentCheckpoints = currentRailway.checkpoints;
       while(true){
+        
         JsonReference train = parser.getReference().key("ctatt").key("route").index(0).key("train").index(count);
         String nextStation = train.key("nextStaNm").valueString();
         String destNm = train.key("destNm").valueString();
-        Serial.println(nextStation);
         int trainDir = train.key("trDr").valueString().toInt();
         float lat = atof(train.key("lat").valueString().c_str());
         float lon = atof(train.key("lon").valueString().c_str());
+        
 
+        /*
+        JsonReference train = parser.getReference().key("lines").index(count);
+        String nextStation = train.key("next_stop").valueString();
+        String destNm = train.key("destination").valueString();
+        int trainDir = train.key("direction").valueInt();
+        float lat = train.key("latitude").valueFloat();
+        float lon = train.key("longitude").valueFloat();
+        */
+       
         if(nextStation.length() <= 1){
           Serial.println("break");
           break;
@@ -272,8 +282,8 @@ void loop() {
               segmentPos += currentRailway.scalers.at(i);
             }
           }
-          //flip train directions on brown loop
-          if(currentRailway.name == "brn" && closestIndex >= currentRailway.lowerLoopBound && closestIndex <= currentRailway.upperLoopBound && secondClosestIndex >= currentRailway.lowerLoopBound && secondClosestIndex <= currentRailway.upperLoopBound){
+          //flip train directions on brown and pink loop
+          if((currentRailway.name == "brn" || currentRailway.name == "pink") && closestIndex >= currentRailway.lowerLoopBound && closestIndex <= currentRailway.upperLoopBound && secondClosestIndex >= currentRailway.lowerLoopBound && secondClosestIndex <= currentRailway.upperLoopBound){
             trainDir = 6 - trainDir;
           }
           //fix inconsistency from trDr
@@ -394,6 +404,9 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
       }else if(inputBuffer == "blue"){
         Serial.println("receive blue");
         colorAdr = 1;
+      }else if(inputBuffer == "green"){
+        Serial.println("receive green");
+        colorAdr = 2;
       }
       Wire.beginTransmission(addressArr[bleCount - 1]);
       Wire.write(String(railways.at(colorAdr).colors.at(0).c_str()));
