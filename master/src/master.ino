@@ -45,8 +45,8 @@ Railway orangeLine = Railway(
 );
 
 Railway purpleLine = Railway(
-  {},
-  {},
+  {Checkpoint(41.885840, -87.633990), Checkpoint(41.885921, -87.626137), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.885840, -87.633990), Checkpoint(41.9103656, -87.6373962), Checkpoint(41.9107586, -87.648068)},
+  {5, 5, 5, 5, 15, 5},
   40,
   "p",
   {"800080", "050005"}
@@ -65,7 +65,7 @@ std::vector<Railway> railways;
 
 constexpr size_t I2C_BUFFER_SIZE = 512;
 
-const int slaveCountExpected = 1;
+const int slaveCountExpected = 2;
 
 int addressArr[slaveCountExpected];
 int sequenceArr[slaveCountExpected];
@@ -89,7 +89,7 @@ http_request_t request;
 http_response_t response;
 
 HttpClient http;
-JsonParserStatic<15000, 1500> parser;
+JsonParserStatic<10000, 1000> parser;
 
 bool userInput = false;
 
@@ -108,15 +108,17 @@ void setup() {
 
   acquireWireBuffer();
   Wire.begin();
-  randomizeAddress();
 
   request.hostname = "lapi.transitchicago.com";
   request.port = 80;
 
   brownLine.setLoopIndex(4, 0);
   orangeLine.setLoopIndex(2, 6);
+  purpleLine.setLoopIndex(4, 0);
   pinkLine.setLoopIndex(3, 7);
-  railways = {orangeLine};
+  railways = {orangeLine, pinkLine};
+
+  randomizeAddress();
 }
 
 void loop() {
@@ -125,7 +127,7 @@ void loop() {
   while(userInput){
     //loop through each train, loop breaks when all trains have been parsed
     for(int j = 0; j < railways.size(); j++){
-      delay(2500);
+      delay(1500);
       request.path = "/api/1.0/ttpositions.aspx?key=00ff09063caa46748434d5fa321d048f&rt=" + String(railways.at(j).name.c_str()) + "&outputType=JSON";
       http.get(request, response, headers);
 
@@ -141,17 +143,13 @@ void loop() {
       Railway currentRailway = railways.at(j);
       std::vector<Checkpoint> currentCheckpoints = currentRailway.checkpoints;
       while(true){
-        Serial.println("while");
         JsonReference train = parser.getReference().key("ctatt").key("route").index(0).key("train").index(count);
         String nextStation = train.key("nextStaNm").valueString();
+        String destNm = train.key("destNm").valueString();
         Serial.println(nextStation);
-        Serial.println("traindir");
         int trainDir = train.key("trDr").valueString().toInt();
-        Serial.println("lat");
         float lat = atof(train.key("lat").valueString().c_str());
-        Serial.println("lon");
         float lon = atof(train.key("lon").valueString().c_str());
-        Serial.println("get data");
 
         if(nextStation.length() <= 1){
           Serial.println("break");
@@ -163,16 +161,13 @@ void loop() {
         for(int i = 0; i < checkpointCount; i++){
           currentRailway.distances.at(i) = currentCheckpoints.at(i).getDistance(lat, lon);
         }
-        Serial.println("distance calculation");
         int closestIndex = std::min_element(currentRailway.distances.begin(), currentRailway.distances.end()) - currentRailway.distances.begin();
         if(closestIndex == currentRailway.tripleIndex){
           closestIndex = currentRailway.loopIndex;
         }
 
-        Serial.println("closest index");
-
         //calculates which checkpoint is on the other side of the train from the nearest checkpoint, works when turns are 90 degrees or less
-        float x, x1, y, y1, slope;
+        float x, x1, y, y1, slope, perpendicularSlope;
         int secondClosestIndex;
 
         x = lat;
@@ -186,16 +181,24 @@ void loop() {
           slope = (y - y1) / (x - x1);
         }
 
-        Serial.println("slope");
+        if(slope == 0){
+          perpendicularSlope = __FLT_MAX__ / 10;
+          Serial.println("slope 0");
+        }else if(slope >= __FLT_MAX__ / 10){
+          perpendicularSlope = 0;
+          Serial.println("slope max");
+        }else{
+          perpendicularSlope = -1 / slope;
+        }
 
         bool pointSide, nearestSide, loopPointSide;
         bool validTrain = true;
 
         if(closestIndex == 0){
-          pointSide = (-1 / slope * (currentCheckpoints.at(closestIndex + 1).lat - x) + y) > currentCheckpoints.at(closestIndex + 1).lon;
-          nearestSide = (-1 / slope * (currentCheckpoints.at(closestIndex).lat - x) + y) > currentCheckpoints.at(closestIndex).lon;
+          pointSide = (perpendicularSlope * (currentCheckpoints.at(closestIndex + 1).lat - x) + y) > currentCheckpoints.at(closestIndex + 1).lon;
+          nearestSide = (perpendicularSlope * (currentCheckpoints.at(closestIndex).lat - x) + y) > currentCheckpoints.at(closestIndex).lon;
           if(currentRailway.loopIndex == closestIndex){
-            loopPointSide = (-1 / slope * (currentCheckpoints.at(currentRailway.tripleIndex - 1).lat - x) + y) > currentCheckpoints.at(currentRailway.tripleIndex - 1).lon;
+            loopPointSide = (perpendicularSlope * (currentCheckpoints.at(currentRailway.tripleIndex - 1).lat - x) + y) > currentCheckpoints.at(currentRailway.tripleIndex - 1).lon;
             if(nearestSide != pointSide){
               secondClosestIndex = 1;
             }else if(nearestSide != loopPointSide){
@@ -213,11 +216,11 @@ void loop() {
             }
           }
         }else{
-          pointSide = (-1 / slope * (currentCheckpoints.at(closestIndex - 1).lat - x) + y) > currentCheckpoints.at(closestIndex - 1).lon;
-          nearestSide = (-1 / slope * (currentCheckpoints.at(closestIndex).lat - x) + y) > currentCheckpoints.at(closestIndex).lon;
+          pointSide = (perpendicularSlope * (currentCheckpoints.at(closestIndex - 1).lat - x) + y) > currentCheckpoints.at(closestIndex - 1).lon;
+          nearestSide = (perpendicularSlope * (currentCheckpoints.at(closestIndex).lat - x) + y) > currentCheckpoints.at(closestIndex).lon;
           if(closestIndex == checkpointCount - 1){
             if(closestIndex == currentRailway.loopIndex){
-              loopPointSide = (-1 / slope * (currentCheckpoints.at(currentRailway.tripleIndex - 1).lat - x) + y) > currentCheckpoints.at(currentRailway.tripleIndex - 1).lon;
+              loopPointSide = (perpendicularSlope * (currentCheckpoints.at(currentRailway.tripleIndex - 1).lat - x) + y) > currentCheckpoints.at(currentRailway.tripleIndex - 1).lon;
               if(nearestSide != pointSide){
                 secondClosestIndex = checkpointCount - 2;
               }else if(nearestSide != loopPointSide){
@@ -243,8 +246,6 @@ void loop() {
           }
         }
 
-        Serial.println("second closest index");
-
         float segmentPos;
         if(validTrain){
           if(closestIndex < secondClosestIndex){
@@ -260,14 +261,21 @@ void loop() {
               segmentPos += currentRailway.scalers.at(i);
             }
           }
-          if(currentRailway.loopIndex == 0 && closestIndex >= currentRailway.lowerLoopBound && closestIndex <= currentRailway.upperLoopBound && secondClosestIndex >= currentRailway.lowerLoopBound && secondClosestIndex <= currentRailway.upperLoopBound){
+          //flip train directions on brown loop
+          if(currentRailway.name == "brn" && closestIndex >= currentRailway.lowerLoopBound && closestIndex <= currentRailway.upperLoopBound && secondClosestIndex >= currentRailway.lowerLoopBound && secondClosestIndex <= currentRailway.upperLoopBound){
             trainDir = 6 - trainDir;
           }
-          currentRailway.outputs.at((int)floor(segmentPos) + 1) = trainDir;
+          //fix inconsistency from trDr
+          if(currentRailway.name == "p"){
+            if(destNm == "Linden"){
+              trainDir = 1;
+            }else{
+              trainDir = 5;
+            }
+          }
+          currentRailway.outputs.at((int)floor(segmentPos)) = trainDir;
           Serial.printlnf("%i, %i", closestIndex, secondClosestIndex);
         }
-
-        Serial.println("segment pos");
 
         count++;
       }
@@ -279,13 +287,11 @@ void loop() {
       }
       Wire.endTransmission();
       Serial.println();
-      Serial.println("send to slave");
     }
     Serial.println();
   }
 
   Serial.println();
-  delay(1000);
 }
 
 //clears up conflicts with multiple i2c slaves having the same address
@@ -346,7 +352,7 @@ void randomizeAddress(){
       Serial.print(", ");
 
       addressArr[count] = i;
-
+  
       count++;
     }
   }
