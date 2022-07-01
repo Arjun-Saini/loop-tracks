@@ -47,12 +47,12 @@ Railway greenLine = Railway(
 );
 
 Railway orangeLine = Railway(
-  {Checkpoint(41.84678, -87.648088), Checkpoint(41.85817, -87.627117), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.885921, -87.626137), Checkpoint(41.885840, -87.633990), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.8767992, -87.6255196)},
-  {13, 7, 5, 5, 5, 5},
+  {Checkpoint(41.84678, -87.648088), Checkpoint(41.85817, -87.627117), Checkpoint(41.875689, -87.626019), Checkpoint(41.876955, -87.626044), Checkpoint(41.885921, -87.626137), Checkpoint(41.885840, -87.633990), Checkpoint(41.876835, -87.633710), Checkpoint(41.8767992, -87.6255196)},
+  {12, 7, 1, 5, 5, 5, 5},
   40,
   "org",
   {"FF8000", "0A0500"},
-  {2, 6}
+  {3, 7}
 );
 
 Railway purpleLine = Railway(
@@ -65,8 +65,8 @@ Railway purpleLine = Railway(
 
 Railway pinkLine = Railway(
   {Checkpoint(41.853964, -87.705408), Checkpoint(41.854856, -87.6695341), Checkpoint(41.8849389, -87.6696133), Checkpoint(41.885840, -87.633990), Checkpoint(41.885921, -87.626137), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.885840, -87.633990)},
-  {15, 15, 15, 5, 5, 5, 5},
-  65,
+  {7, 7, 6, 5, 5, 5, 5},
+  40,
   "pink",
   {"FF80FF", "0A050A"},
   {3, 7}
@@ -124,10 +124,10 @@ void setup() {
   request.port = 80;
 
   brownLine.setLoopIndex(4, 0);
-  orangeLine.setLoopIndex(2, 6);
+  orangeLine.setLoopIndex(3, 7);
   purpleLine.setLoopIndex(4, 0);
   pinkLine.setLoopIndex(3, 7);
-  railways = {redLine, brownLine, purpleLine};
+  railways = {orangeLine, brownLine, pinkLine};
 
   randomizeAddress();
 }
