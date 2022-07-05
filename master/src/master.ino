@@ -110,7 +110,9 @@ void setup() {
   Wire.begin();
 
   request.hostname = "lapi.transitchicago.com";
+  //request.hostname = "trek.thewcl.com";
   request.port = 80;
+  //request.port = 443;
 
   brownLine.setLoopIndex(4, 0);
   orangeLine.setLoopIndex(3, 7);
@@ -129,6 +131,7 @@ void loop() {
     for(int j = 0; j < railways.size(); j++){
       delay(1500);
       request.path = "/api/1.0/ttpositions.aspx?key=00ff09063caa46748434d5fa321d048f&rt=" + String(railways.at(j).name.c_str()) + "&outputType=JSON";
+      //request.path = "/cta?lines=" + String(railways.at(j).name.c_str());
       http.get(request, response, headers);
 
       Serial.println("parsing");
@@ -143,7 +146,6 @@ void loop() {
       Railway currentRailway = railways.at(j);
       std::vector<Checkpoint> currentCheckpoints = currentRailway.checkpoints;
       while(true){
-        
         JsonReference train = parser.getReference().key("ctatt").key("route").index(0).key("train").index(count);
         String nextStation = train.key("nextStaNm").valueString();
         String destNm = train.key("destNm").valueString();
@@ -151,15 +153,12 @@ void loop() {
         float lat = atof(train.key("lat").valueString().c_str());
         float lon = atof(train.key("lon").valueString().c_str());
         
-
-        /*
-        JsonReference train = parser.getReference().key("lines").index(count);
-        String nextStation = train.key("next_stop").valueString();
-        String destNm = train.key("destination").valueString();
-        int trainDir = train.key("direction").valueInt();
-        float lat = train.key("latitude").valueFloat();
-        float lon = train.key("longitude").valueFloat();
-        */
+        // JsonReference train = parser.getReference().key("lines").index(0).key("trains").index(count);
+        // String nextStation = train.key("next_stop").valueString();
+        // String destNm = train.key("destination").valueString();
+        // int trainDir = train.key("direction").valueInt();
+        // float lat = train.key("latitude").valueFloat();
+        // float lon = train.key("longitude").valueFloat();
        
         if(nextStation.length() <= 1){
           Serial.println("break");
