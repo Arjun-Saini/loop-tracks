@@ -3,15 +3,16 @@
 /******************************************************/
 
 #include "Particle.h"
-#line 1 "c:/Users/Arjun/Documents/GitHub/loop_tracks/slave/src/slave.ino"
-#include "dotstar.h"
+#line 1 "/Users/sainihome/Documents/GitHub/loop-tracks/slave/src/slave.ino"
+//#include "dotstar.h"
+#include "neopixel.h"
 
 void setup();
 void loop();
 void dataReceived(int count);
 void dataRequest();
 hal_i2c_config_t acquireWireBuffer();
-#line 3 "c:/Users/Arjun/Documents/GitHub/loop_tracks/slave/src/slave.ino"
+#line 4 "/Users/sainihome/Documents/GitHub/loop-tracks/slave/src/slave.ino"
 SYSTEM_MODE(MANUAL)
 
 int address;
@@ -19,13 +20,14 @@ int requestMode = 0;
 bool verifyAddress = false;
 String deviceID = System.deviceID();
 bool blink = false;
-Adafruit_DotStar strip = Adafruit_DotStar(72);
+Adafruit_NeoPixel strip(100, D2, 0x02);
 constexpr size_t I2C_BUFFER_SIZE = 512;
 
-uint32_t brightRed = 0xFF0000;
-uint32_t red = 0x0A0000;
+uint32_t headColor;
+uint32_t tailColor;
 
 void setup() {
+  WiFi.off();
   Serial.begin(9600);
   address = random(8, 64);
   acquireWireBuffer();
@@ -45,10 +47,9 @@ void loop() {
     digitalWrite(D7, LOW);
     delay(500);
   }
-  // for(int i = 0; i < 40; i++){
-  //   strip.setPixelColor(i, 0xFF0000);
-  // }
-  // strip.show();
+
+  strip.show();
+
   delay(100);
 }
 
@@ -59,8 +60,8 @@ void dataReceived(int count){
   char inputBuffer[size];
   int counter = 0;
 
-  Serial.println("count: ");
-  Serial.print(Wire.available());
+  Serial.print("count: ");
+  Serial.println(Wire.available());
   Serial.println();
 
   while(Wire.available() > 0){
@@ -100,21 +101,33 @@ void dataReceived(int count){
       Wire.onRequest(dataRequest);
       requestMode = 0;
     }
-  }else{
-    for(int i = 0; i < size; i++){
-    if(inputBuffer[i] == '1'){
-        strip.setPixelColor(i - 1, red);
-        strip.setPixelColor(i, red);
-        strip.setPixelColor(i + 1, brightRed);
-      }else if(inputBuffer[i] == '5'){
-        strip.setPixelColor(i - 1, brightRed);
-        strip.setPixelColor(i, red);
-        strip.setPixelColor(i + 1, red);
-      }
+  }else if(size == 12){
+    std::string headBuffer = "";
+    std::string tailBuffer = "";
+    for(int i = 0; i < 6; i++){
+      headBuffer += inputBuffer[i];
     }
-    strip.show();
+    for(int i = 6; i < 12; i++){
+      tailBuffer += inputBuffer[i];
+    }
+    headColor = std::stoul(headBuffer, nullptr, 16);
+    tailColor = std::stoul(tailBuffer, nullptr, 16);
+  }else{
+    for(int i = 0; i < size + 1; i++){
+      //if(inputBuffer[i] == '0'){
+        strip.setPixelColor(i, 0);
+      //}
+    }
     for(int i = 0; i < size; i++){
-      strip.setPixelColor(i, 0);
+      if(inputBuffer[i] == '1'){
+        strip.setPixelColor(i - 1, tailColor);
+        strip.setPixelColor(i, tailColor);
+        strip.setPixelColor(i + 1, headColor);
+      }else if(inputBuffer[i] == '5'){
+        strip.setPixelColor(i - 1, headColor);
+        strip.setPixelColor(i, tailColor);
+        strip.setPixelColor(i + 1, tailColor);
+      }
     }
   }
 }
