@@ -555,6 +555,9 @@
       (net 2 "GND") (pinfunction "4") (pintype "bidirectional") (solder_mask_margin 0.1016) (tstamp 0a32e656-625c-4e97-96b3-e6738644e174))
   )
 
+  (gr_line (start 160.274 104.902) (end 155.702 102.87) (layer "B.SilkS") (width 0.12) (tstamp 1987bdde-1d3a-47c0-8ec5-42d0f3a7edd4))
+  (gr_line (start 160.274 104.902) (end 155.702 106.934) (layer "B.SilkS") (width 0.12) (tstamp 1dffc29d-7955-4044-aa06-b1a98097a3a4))
+  (gr_line (start 138.43 104.902) (end 160.274 104.902) (layer "B.SilkS") (width 0.12) (tstamp 77cab42b-7113-4ac1-a8dc-334f6d9abb15))
   (gr_line (start 171.704 99.9236) (end 171.704 97.028) (layer "Edge.Cuts") (width 0.05) (tstamp 02e7ba0c-21f0-49dd-8405-e02d514b7b99))
   (gr_line (start 171.704 99.9236) (end 131.064 99.9236) (layer "Edge.Cuts") (width 0.05) (tstamp 09110da3-f3f3-4bcc-895d-1c5065e1b57c))
   (gr_line (start 131.064 112.776) (end 122.428 112.776) (layer "Edge.Cuts") (width 0.05) (tstamp 24bcd8ab-6715-4499-bc69-d2480dc66f7d))
