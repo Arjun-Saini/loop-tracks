@@ -15,12 +15,14 @@ hal_i2c_config_t acquireWireBuffer();
 #line 4 "/Users/sainihome/Documents/GitHub/loop-tracks/slave/src/slave.ino"
 SYSTEM_MODE(MANUAL)
 
+#define MAX_PIXELS 100
+
 int address;
 int requestMode = 0;
 bool verifyAddress = false;
 String deviceID = System.deviceID();
 bool blink = false;
-Adafruit_NeoPixel strip(100, D2, 0x02);
+Adafruit_NeoPixel strip(MAX_PIXELS, D2, 0x02);
 constexpr size_t I2C_BUFFER_SIZE = 512;
 
 uint32_t headColor;
@@ -112,11 +114,11 @@ void dataReceived(int count){
     }
     headColor = std::stoul(headBuffer, nullptr, 16);
     tailColor = std::stoul(tailBuffer, nullptr, 16);
-  }else{
-    for(int i = 0; i < size + 1; i++){
-      //if(inputBuffer[i] == '0'){
+  }else{    
+    for(int i = 0; i < MAX_PIXELS; i++){
+      if(strip.getPixelColor(i) == headColor || strip.getPixelColor(i) == tailColor){
         strip.setPixelColor(i, 0);
-      //}
+      }
     }
     for(int i = 0; i < size; i++){
       if(inputBuffer[i] == '1'){
