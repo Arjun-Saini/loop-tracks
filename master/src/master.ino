@@ -2,6 +2,7 @@
 #include "JsonParserGeneratorRK.h"
 #include "Railway.cpp"
 
+//all loop scalers must be the same
 Railway redLine = Railway(
   {Checkpoint(41.853028, -87.63109), Checkpoint(41.9041, -87.628921), Checkpoint(41.903888, -87.639506), Checkpoint(41.913732, -87.652380), Checkpoint(41.9253, -87.65286)},
   {25, 3, 7, 5},
@@ -50,7 +51,8 @@ Railway purpleLine = Railway(
   {5, 5, 5, 5, 15, 5},
   {0, 20, 20},
   "p",
-  {"800080", "050005"}
+  {"800080", "050005"},
+  {0, 4}
 );
 
 Railway pinkLine = Railway(
@@ -68,8 +70,10 @@ constexpr size_t I2C_BUFFER_SIZE = 512;
 
 const int slaveCountExpected = 3;
 
+#define TEMP_COUNT 5 //2 per railway + 1 for loop
+
 int addressArr[slaveCountExpected];
-int sequenceArr[5]; //2 per railway + 1 for loop
+int sequenceArr[TEMP_COUNT];
 int slaveCount, bleCount;
 
 void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context);
@@ -119,7 +123,7 @@ void setup() {
   orangeLine.setLoopIndex(3, 7);
   purpleLine.setLoopIndex(4, 0);
   pinkLine.setLoopIndex(3, 7);
-  railways = {brownLine, pinkLine};
+  railways = {orangeLine, purpleLine};
 
   randomizeAddress();
 }
@@ -263,6 +267,7 @@ void loop(){
         Serial.println("segment pos");
         int pcbSegment;
         float segmentPos;
+        bool inLoop = false;
         if(validTrain){
           int lowerIndex, upperIndex;
 
@@ -292,11 +297,12 @@ void loop(){
           }
           //in loop
           else{
+            inLoop = true;
             lowerScaleBound = currentRailway.lowerLoopBound;
             pcbSegment = 2;
             Serial.println("in");
 
-            if(currentRailway.name == "brn" || currentRailway.name == "pink"){
+            if(currentRailway.name == "brn" || currentRailway.name == "pink" || currentRailway.name == "org" || currentRailway.name == "g"){
                trainDir = 6 - trainDir;
             }
           }
@@ -314,6 +320,12 @@ void loop(){
             }
           }
           
+          if(currentRailway.name == "org" && inLoop){
+            segmentPos = (int)((1.5 * (float)currentRailway.outputs[2].size()) - segmentPos) % currentRailway.outputs[2].size();
+            //segmentPos = (30 - (int)floor(segmentPos)) % 20;
+          }else if(currentRailway.name == "g" && inLoop){
+            segmentPos = (currentRailway.outputs[2].size() - (int)floor(segmentPos));
+          }
           Serial.println("output vector");
           currentRailway.outputs[pcbSegment][(int)floor(segmentPos)] = trainDir;
           Serial.printlnf("%i, %i, %f", closestIndex, secondClosestIndex, segmentPos);
@@ -324,7 +336,7 @@ void loop(){
       for(int i = 0; i < 3; i++){
         Serial.println("sending");
         if(i == 2){
-          Wire.beginTransmission(sequenceArr[4]); //temp
+          Wire.beginTransmission(sequenceArr[TEMP_COUNT - 1]); //temp
         }else{
           Wire.beginTransmission(sequenceArr[j * 2 + i]);
         }
@@ -333,7 +345,7 @@ void loop(){
         Wire.endTransmission();
 
         if(i == 2){
-          Wire.beginTransmission(sequenceArr[4]); //temp
+          Wire.beginTransmission(sequenceArr[TEMP_COUNT - 1]); //temp
         }else{
           Wire.beginTransmission(sequenceArr[j * 2 + i]);
         }
@@ -425,7 +437,7 @@ void randomizeAddress(){
       }
     }
   }
-  sequenceArr[4] = addressArr[2]; //temp
+  sequenceArr[TEMP_COUNT - 1] = addressArr[slaveCountExpected - 1]; //temp
 }
 
 void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context){
