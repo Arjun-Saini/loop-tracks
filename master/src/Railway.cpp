@@ -8,7 +8,7 @@ class Railway{
     std::vector<Checkpoint> checkpoints;
     std::vector<float> distances;
     std::vector<int> scalers;
-    std::vector<std::vector<int>> outputs;
+    std::vector<std::vector<int>> outputs; //before, after, loop
     std::string name;
     std::vector<std::string> colors;
     int tripleIndex = -1;

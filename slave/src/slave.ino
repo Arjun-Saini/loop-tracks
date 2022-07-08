@@ -102,11 +102,11 @@ void dataReceived(int count){
     }
     headColor = std::stoul(headBuffer, nullptr, 16);
     tailColor = std::stoul(tailBuffer, nullptr, 16);
-  }else{
+  }else{    
     for(int i = 0; i < MAX_PIXELS; i++){
-      //if(inputBuffer[i] == '0'){
+      if(strip.getPixelColor(i) == headColor || strip.getPixelColor(i) == tailColor){
         strip.setPixelColor(i, 0);
-      //}
+      }
     }
     for(int i = 0; i < size; i++){
       if(inputBuffer[i] == '1'){

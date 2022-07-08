@@ -16,7 +16,7 @@ hal_i2c_config_t acquireWireBuffer();
 Railway redLine = Railway(
   {Checkpoint(41.853028, -87.63109), Checkpoint(41.9041, -87.628921), Checkpoint(41.903888, -87.639506), Checkpoint(41.913732, -87.652380), Checkpoint(41.9253, -87.65286)},
   {25, 3, 7, 5},
-  {0, 0, 40},
+  {0, 40, 0},
   "red",
   {"FF0000", "0A0000"}
 );
@@ -24,7 +24,7 @@ Railway redLine = Railway(
 Railway blueLine = Railway(
   {Checkpoint(41.873647, -87.727931), Checkpoint(41.875666, -87.672961), Checkpoint(41.875293, -87.640976), Checkpoint(41.875660, -87.627620), Checkpoint(41.885738, -87.629540), Checkpoint(41.885698, -87.639828), Checkpoint(41.915497, -87.686258)},
   {12, 8, 5, 5, 5, 25},
-  {0, 0, 60},
+  {0, 60, 0},
   "blue",
   {"0000FF", "00000A"}
 );
@@ -41,7 +41,7 @@ Railway brownLine = Railway(
 Railway greenLine = Railway(
   {Checkpoint(41.853115, -87.626402), Checkpoint(41.876946, -87.626046), Checkpoint(41.885921, -87.626137), Checkpoint(41.885724, -87.633945), Checkpoint(41.88422, -87.696234)},
   {15, 5, 5, 15},
-  {15, 10, 15},
+  {15, 15, 10},
   "g",
   {"00FF00", "000A00"},
   {1, 3}
@@ -50,7 +50,7 @@ Railway greenLine = Railway(
 Railway orangeLine = Railway(
   {Checkpoint(41.84678, -87.648088), Checkpoint(41.85817, -87.627117), Checkpoint(41.875689, -87.626019), Checkpoint(41.876955, -87.626044), Checkpoint(41.885921, -87.626137), Checkpoint(41.885840, -87.633990), Checkpoint(41.876835, -87.633710), Checkpoint(41.8767992, -87.6255196)},
   {12, 7, 1, 5, 5, 5, 5},
-  {20, 20, 0},
+  {20, 0, 20},
   "org",
   {"FF8000", "0A0500"},
   {3, 7}
@@ -67,7 +67,7 @@ Railway purpleLine = Railway(
 Railway pinkLine = Railway(
   {Checkpoint(41.853964, -87.705408), Checkpoint(41.854856, -87.6695341), Checkpoint(41.8849389, -87.6696133), Checkpoint(41.885840, -87.633990), Checkpoint(41.885921, -87.626137), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.885840, -87.633990)},
   {7, 7, 6, 5, 5, 5, 5},
-  {20, 20, 0},
+  {20, 0, 20},
   "pink",
   {"FF80FF", "0A050A"},
   {3, 7}
@@ -77,10 +77,10 @@ std::vector<Railway> railways;
 
 constexpr size_t I2C_BUFFER_SIZE = 512;
 
-const int slaveCountExpected = 1;
+const int slaveCountExpected = 3;
 
 int addressArr[slaveCountExpected];
-int sequenceArr[3]; //3 per railway
+int sequenceArr[5]; //2 per railway + 1 for loop
 int slaveCount, bleCount;
 
 void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context);
@@ -130,13 +130,16 @@ void setup() {
   orangeLine.setLoopIndex(3, 7);
   purpleLine.setLoopIndex(4, 0);
   pinkLine.setLoopIndex(3, 7);
-  railways = {blueLine};
+  railways = {brownLine, pinkLine};
 
   randomizeAddress();
 }
 
 void loop(){
   Serial.println("loop start");
+  for(int i : sequenceArr){
+    Serial.printf("%i, ", i);
+  }
   
   //while(userInput){
     //loop through each train, loop breaks when all trains have been parsed
@@ -295,13 +298,13 @@ void loop(){
           //after loop, also for lines that don't go through loop
           else if(closestIndex > currentRailway.upperLoopBound || secondClosestIndex > currentRailway.upperLoopBound){
             lowerScaleBound = currentRailway.upperLoopBound;
-            pcbSegment = 2;
+            pcbSegment = 1;
             Serial.println("after");
           }
           //in loop
           else{
             lowerScaleBound = currentRailway.lowerLoopBound;
-            pcbSegment = 1;
+            pcbSegment = 2;
             Serial.println("in");
 
             if(currentRailway.name == "brn" || currentRailway.name == "pink"){
@@ -331,12 +334,20 @@ void loop(){
       }
       for(int i = 0; i < 3; i++){
         Serial.println("sending");
-        Wire.beginTransmission(sequenceArr[j * 3 + i]);
+        if(i == 2){
+          Wire.beginTransmission(sequenceArr[4]); //temp
+        }else{
+          Wire.beginTransmission(sequenceArr[j * 2 + i]);
+        }
         Wire.write(String(currentRailway.colors[0].c_str()));
         Wire.write(String(currentRailway.colors[1].c_str()));
         Wire.endTransmission();
 
-        Wire.beginTransmission(sequenceArr[j * 3 + i]);
+        if(i == 2){
+          Wire.beginTransmission(sequenceArr[4]); //temp
+        }else{
+          Wire.beginTransmission(sequenceArr[j * 2 + i]);
+        }
         Serial.printlnf("rail part %i", i);
         for(int j = 0; j < currentRailway.outputs[i].size(); j++){
           Wire.write((char)currentRailway.outputs[i][j] + '0');
@@ -417,14 +428,15 @@ void randomizeAddress(){
 
   int seqCount = 0;
   for(int i = 0; i < railways.size(); i++){
-    for(int j = 0; j < 3; j++){
+    for(int j = 0; j < 2; j++){
       if(railways[i].outputs[j].size() == 0){
-        sequenceArr[3 * i + j] = 0;
+        sequenceArr[2 * i + j] = 0;
       }else{
-        sequenceArr[3 * i + j] = addressArr[seqCount++];
+        sequenceArr[2 * i + j] = addressArr[seqCount++];
       }
     }
   }
+  sequenceArr[4] = addressArr[2]; //temp
 }
 
 void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context){
