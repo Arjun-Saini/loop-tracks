@@ -5,15 +5,15 @@
 Railway redLine = Railway(
   {Checkpoint(41.853028, -87.63109), Checkpoint(41.9041, -87.628921), Checkpoint(41.903888, -87.639506), Checkpoint(41.913732, -87.652380), Checkpoint(41.9253, -87.65286)},
   {25, 3, 7, 5},
-  {40, 40, 40},
+  {0, 0, 40},
   "red",
   {"FF0000", "0A0000"}
 );
 
 Railway blueLine = Railway(
-  {Checkpoint(41.873797, -87.725663), Checkpoint(41.875539, -87.640984), Checkpoint(41.876313, -87.628210), Checkpoint(41.886032, -87.629817), Checkpoint(41.885716, -87.639876), Checkpoint(41.916157, -87.687364)},
-  {20, 5, 5, 5, 25},
-  {60, 60, 60},
+  {Checkpoint(41.873647, -87.727931), Checkpoint(41.875666, -87.672961), Checkpoint(41.875293, -87.640976), Checkpoint(41.875660, -87.627620), Checkpoint(41.885738, -87.629540), Checkpoint(41.885698, -87.639828), Checkpoint(41.915497, -87.686258)},
+  {12, 8, 5, 5, 5, 25},
+  {0, 0, 60},
   "blue",
   {"0000FF", "00000A"}
 );
@@ -39,7 +39,7 @@ Railway greenLine = Railway(
 Railway orangeLine = Railway(
   {Checkpoint(41.84678, -87.648088), Checkpoint(41.85817, -87.627117), Checkpoint(41.875689, -87.626019), Checkpoint(41.876955, -87.626044), Checkpoint(41.885921, -87.626137), Checkpoint(41.885840, -87.633990), Checkpoint(41.876835, -87.633710), Checkpoint(41.8767992, -87.6255196)},
   {12, 7, 1, 5, 5, 5, 5},
-  {40, 40, 40},
+  {20, 20, 0},
   "org",
   {"FF8000", "0A0500"},
   {3, 7}
@@ -48,7 +48,7 @@ Railway orangeLine = Railway(
 Railway purpleLine = Railway(
   {Checkpoint(41.885840, -87.633990), Checkpoint(41.885921, -87.626137), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.885840, -87.633990), Checkpoint(41.9103656, -87.6373962), Checkpoint(41.9107586, -87.648068)},
   {5, 5, 5, 5, 15, 5},
-  {40, 40, 40},
+  {0, 20, 20},
   "p",
   {"800080", "050005"}
 );
@@ -56,7 +56,7 @@ Railway purpleLine = Railway(
 Railway pinkLine = Railway(
   {Checkpoint(41.853964, -87.705408), Checkpoint(41.854856, -87.6695341), Checkpoint(41.8849389, -87.6696133), Checkpoint(41.885840, -87.633990), Checkpoint(41.885921, -87.626137), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.885840, -87.633990)},
   {7, 7, 6, 5, 5, 5, 5},
-  {40, 40, 40},
+  {20, 20, 0},
   "pink",
   {"FF80FF", "0A050A"},
   {3, 7}
@@ -66,10 +66,10 @@ std::vector<Railway> railways;
 
 constexpr size_t I2C_BUFFER_SIZE = 512;
 
-const int slaveCountExpected = 3;
+const int slaveCountExpected = 1;
 
-int addressArr[3];
-int sequenceArr[3];
+int addressArr[slaveCountExpected];
+int sequenceArr[3]; //3 per railway
 int slaveCount, bleCount;
 
 void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context);
@@ -119,7 +119,7 @@ void setup() {
   orangeLine.setLoopIndex(3, 7);
   purpleLine.setLoopIndex(4, 0);
   pinkLine.setLoopIndex(3, 7);
-  railways = {greenLine};
+  railways = {blueLine};
 
   randomizeAddress();
 }
@@ -271,6 +271,9 @@ void loop(){
             upperIndex = closestIndex;
           }
 
+          segmentPos = currentRailway.distances[lowerIndex] / (currentRailway.distances[lowerIndex] + currentRailway.distances[upperIndex]);
+          segmentPos *= currentRailway.scalers[lowerIndex];
+
           int lowerScaleBound;
           //before loop
           if(closestIndex < currentRailway.lowerLoopBound || secondClosestIndex < currentRailway.lowerLoopBound){
@@ -278,7 +281,7 @@ void loop(){
             pcbSegment = 0;
             Serial.println("before");
           }
-          //after loop
+          //after loop, also for lines that don't go through loop
           else if(closestIndex > currentRailway.upperLoopBound || secondClosestIndex > currentRailway.upperLoopBound){
             lowerScaleBound = currentRailway.upperLoopBound;
             pcbSegment = 2;
@@ -294,16 +297,9 @@ void loop(){
                trainDir = 6 - trainDir;
             }
           }
-          
-          segmentPos = currentRailway.distances[lowerIndex] / (currentRailway.distances[lowerIndex] + currentRailway.distances[upperIndex]);
-
-          Serial.printlnf("lower scale bound: %i, lowerIndex: %i, initial segpos %f, scalers: ", lowerScaleBound, lowerIndex, segmentPos);
-
-          segmentPos *= currentRailway.scalers[lowerIndex];
 
           for(int i = lowerScaleBound; i < lowerIndex; i++){
             segmentPos += currentRailway.scalers[i];
-            Serial.printf("%i, ", currentRailway.scalers[i]);
           }
 
           //fix inconsistency from trDr
@@ -314,6 +310,7 @@ void loop(){
               trainDir = 5;
             }
           }
+          
           Serial.println("output vector");
           currentRailway.outputs[pcbSegment][(int)floor(segmentPos)] = trainDir;
           Serial.printlnf("%i, %i, %f", closestIndex, secondClosestIndex, segmentPos);
