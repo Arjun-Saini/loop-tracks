@@ -65,10 +65,10 @@ std::vector<Railway> railways;
 
 constexpr size_t I2C_BUFFER_SIZE = 512;
 
-const int slaveCountExpected = 3;
+const int slaveCountExpected = 2;
 
-int addressArr[slaveCountExpected];
-int sequenceArr[slaveCountExpected];
+int addressArr[2];
+int sequenceArr[3];
 int slaveCount, bleCount;
 
 void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context);
@@ -126,7 +126,7 @@ void setup() {
 void loop(){
   Serial.println("loop start");
   
-  while(userInput){
+  //while(userInput){
     //loop through each train, loop breaks when all trains have been parsed
     for(int j = 0; j < railways.size(); j++){
       delay(1500);
@@ -264,29 +264,28 @@ void loop(){
 
           if(closestIndex < secondClosestIndex){
             lowerIndex = closestIndex;
+            upperIndex = secondClosestIndex;
           }else{
             lowerIndex = secondClosestIndex;
+            upperIndex = closestIndex;
           }
 
-          int lowerScaleBound, upperScaleBound;
+          int lowerScaleBound;
           //before loop
           if(closestIndex < currentRailway.lowerLoopBound || secondClosestIndex < currentRailway.lowerLoopBound){
             lowerScaleBound = 0;
-            upperScaleBound = currentRailway.lowerLoopBound - 1;
             pcbSegment = 0;
             Serial.println("before");
           }
           //after loop
           else if(closestIndex > currentRailway.upperLoopBound || secondClosestIndex > currentRailway.upperLoopBound){
             lowerScaleBound = currentRailway.upperLoopBound;
-            upperScaleBound = checkpointCount - 1;
             pcbSegment = 1;
             Serial.println("after");
           }
           //in loop
           else{
             lowerScaleBound = currentRailway.lowerLoopBound;
-            upperScaleBound = currentRailway.upperLoopBound;
             pcbSegment = 2;
             Serial.println("in");
 
@@ -296,28 +295,15 @@ void loop(){
           }
           
           segmentPos = currentRailway.distances[lowerIndex] / (currentRailway.distances[lowerIndex] + currentRailway.distances[upperIndex]);
-          segmentPos *= currentRailway.scalers[lowerIndex];
 
           Serial.printlnf("lower scale bound: %i, lowerIndex: %i, initial segpos %f, scalers: ", lowerScaleBound, lowerIndex, segmentPos);
+
+          segmentPos *= currentRailway.scalers[lowerIndex];
 
           for(int i = lowerScaleBound; i < lowerIndex; i++){
             segmentPos += currentRailway.scalers[i];
             Serial.printf("%i, ", currentRailway.scalers[i]);
           }
-
-          // if(closestIndex < secondClosestIndex){
-          //   segmentPos = currentRailway.distances.at(closestIndex) / (currentRailway.distances.at(closestIndex) + currentRailway.distances.at(secondClosestIndex));
-          //   segmentPos *= currentRailway.scalers.at(closestIndex);
-          //   for(int i = 0; i < closestIndex; i++){
-          //     segmentPos += currentRailway.scalers.at(i);
-          //   }
-          // }else{
-          //   segmentPos = currentRailway.distances.at(secondClosestIndex) / (currentRailway.distances.at(closestIndex) + currentRailway.distances.at(secondClosestIndex));
-          //   segmentPos *= currentRailway.scalers.at(secondClosestIndex);
-          //   for(int i = 0; i < secondClosestIndex; i++){
-          //     segmentPos += currentRailway.scalers.at(i);
-          //   }
-          // }   
 
           //fix inconsistency from trDr
           if(currentRailway.name == "p"){
@@ -351,17 +337,10 @@ void loop(){
         Wire.endTransmission();
       }
 
-      // Wire.beginTransmission(sequenceArr[j]);
-      // for(int i = 0; i < currentRailway.outputs.size(); i++){
-      //   Wire.write((char)currentRailway.outputs.at(i) + '0');
-      //   Serial.print(currentRailway.outputs[i]);
-      //   currentRailway.outputs.at(i) = 0;
-      // }
-      // Wire.endTransmission();
       Serial.println();
     }
     Serial.println();
-  }
+  //}
   Serial.println();
   delay(500);
 }
@@ -424,8 +403,18 @@ void randomizeAddress(){
       Serial.print(", ");
 
       addressArr[count] = i;
-  
       count++;
+    }
+  }
+
+  int seqCount = 0;
+  for(int i = 0; i < railways.size(); i++){
+    for(int j = 0; j < 3; j++){
+      if(railways[i].outputs[j].size() == 0){
+        sequenceArr[3 * i + j] = 0;
+      }else{
+        sequenceArr[3 * i + j] = addressArr[seqCount++];
+      }
     }
   }
 }
