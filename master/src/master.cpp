@@ -39,11 +39,12 @@ Railway brownLine = Railway(
 );
 
 Railway greenLine = Railway(
-  {Checkpoint(41.853115, -87.626402), Checkpoint(41.885921, -87.626137), Checkpoint(41.88422, -87.696234)},
-  {23, 17},
-  {40, 40, 40},
+  {Checkpoint(41.853115, -87.626402), Checkpoint(41.876946, -87.626046), Checkpoint(41.885921, -87.626137), Checkpoint(41.885724, -87.633945), Checkpoint(41.88422, -87.696234)},
+  {15, 5, 5, 15},
+  {15, 10, 15},
   "g",
-  {"00FF00", "000A00"}
+  {"00FF00", "000A00"},
+  {1, 3}
 );
 
 Railway orangeLine = Railway(
@@ -76,9 +77,9 @@ std::vector<Railway> railways;
 
 constexpr size_t I2C_BUFFER_SIZE = 512;
 
-const int slaveCountExpected = 2;
+const int slaveCountExpected = 3;
 
-int addressArr[2];
+int addressArr[3];
 int sequenceArr[3];
 int slaveCount, bleCount;
 
@@ -129,7 +130,7 @@ void setup() {
   orangeLine.setLoopIndex(3, 7);
   purpleLine.setLoopIndex(4, 0);
   pinkLine.setLoopIndex(3, 7);
-  railways = {brownLine};
+  railways = {greenLine};
 
   randomizeAddress();
 }
@@ -291,13 +292,13 @@ void loop(){
           //after loop
           else if(closestIndex > currentRailway.upperLoopBound || secondClosestIndex > currentRailway.upperLoopBound){
             lowerScaleBound = currentRailway.upperLoopBound;
-            pcbSegment = 1;
+            pcbSegment = 2;
             Serial.println("after");
           }
           //in loop
           else{
             lowerScaleBound = currentRailway.lowerLoopBound;
-            pcbSegment = 2;
+            pcbSegment = 1;
             Serial.println("in");
 
             if(currentRailway.name == "brn" || currentRailway.name == "pink"){
@@ -339,7 +340,7 @@ void loop(){
         Wire.endTransmission();
 
         Wire.beginTransmission(sequenceArr[j * 3 + i]);
-        Serial.printlnf("pcb segment %i", i);
+        Serial.printlnf("rail part %i", i);
         for(int j = 0; j < currentRailway.outputs[i].size(); j++){
           Wire.write((char)currentRailway.outputs[i][j] + '0');
           Serial.print(currentRailway.outputs[i][j]);
@@ -413,8 +414,7 @@ void randomizeAddress(){
       Serial.print(i);
       Serial.print(", ");
 
-      addressArr[count] = i;
-      count++;
+      addressArr[count++] = i;
     }
   }
 
