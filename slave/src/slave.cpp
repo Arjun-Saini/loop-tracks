@@ -39,6 +39,7 @@ void setup() {
 
   pinMode(D7, OUTPUT);
   strip.begin();
+  strip.clear();
   strip.show();
 }
 
@@ -115,7 +116,7 @@ void dataReceived(int count){
     headColor = std::stoul(headBuffer, nullptr, 16);
     tailColor = std::stoul(tailBuffer, nullptr, 16);
   }else{    
-    for(int i = 0; i < MAX_PIXELS; i++){
+    for(int i = 0; i < size + 1; i++){
       if(strip.getPixelColor(i) == headColor || strip.getPixelColor(i) == tailColor){
         strip.setPixelColor(i, 0);
       }
