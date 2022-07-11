@@ -79,7 +79,7 @@ std::vector<Railway> railways;
 
 constexpr size_t I2C_BUFFER_SIZE = 512;
 
-int slaveCountExpected = 3; //green adds 2, purple adds 0, every other line adds 1 (7 for full CTA without yellow line)
+int slaveCountExpected = 5; //green adds 2, purple adds 0, every other line adds 1 (7 for full CTA without yellow line)
 int brownLineAdr = 0;
 
 std::vector<int> addressArr = std::vector<int>(slaveCountExpected, 0);
@@ -133,7 +133,7 @@ void setup() {
   orangeLine.setLoopIndex(3, 7);
   purpleLine.setLoopIndex(4, 0);
   pinkLine.setLoopIndex(3, 7);
-  railways = {brownLine, purpleLine, pinkLine, orangeLine};
+  railways = {brownLine, purpleLine, pinkLine, orangeLine, greenLine};
 
   sequenceArr = std::vector<int>(railways.size() * 2, 0);
 
@@ -151,7 +151,7 @@ void loop(){
   //while(userInput){
     //loop through each train, loop breaks when all trains have been parsed
     for(int j = 0; j < railways.size(); j++){
-      delay(1500);
+      delay(1000);
       request.path = "/api/1.0/ttpositions.aspx?key=00ff09063caa46748434d5fa321d048f&rt=" + String(railways[j].name.c_str()) + "&outputType=JSON";
       // request.path = "/cta?lines=" + String(railways[j].name.c_str());
       http.get(request, response, headers);
@@ -389,16 +389,15 @@ void loop(){
           Serial.print(currentRailway.outputs[i][j]);
           currentRailway.outputs[i][j] = 0;
         }
-        
+        Serial.println("before end");
         Wire.endTransmission();
+        Serial.println("after end");
       }
-
       Serial.println();
     }
     Serial.println();
   //}
   Serial.println();
-  delay(500);
 }
 
 //clears up conflicts with multiple i2c slaves having the same address
