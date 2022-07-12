@@ -19,7 +19,7 @@ uint32_t tailColor;
 void setup() {
   WiFi.off();
   Serial.begin(9600);
-  address = random(8, 64);
+  address = random(8, 120);
   acquireWireBuffer();
   Wire.begin(address);
   Wire.onReceive(dataReceived);

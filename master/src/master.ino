@@ -335,7 +335,7 @@ void loop(){
             if(currentRailway.name == pinkLine.name){
               segmentPos = (float)currentRailway.outputs[2].size() - segmentPos;
             }else if(currentRailway.name == orangeLine.name){
-              segmentPos = (int)(segmentPos + 20) % 40;
+              segmentPos = (int)(segmentPos + orangeLine.outputs[2].size() / 2) % orangeLine.outputs[2].size();
             }
           }else{
             if(currentRailway.name == brownLine.name){
