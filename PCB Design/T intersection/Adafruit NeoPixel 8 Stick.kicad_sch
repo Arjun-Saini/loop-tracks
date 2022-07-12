@@ -795,7 +795,7 @@
   (symbol (lib_id "LED:WS2812B") (at 106.68 154.94 0) (mirror y) (unit 1)
     (in_bom yes) (on_board yes) (fields_autoplaced)
     (uuid 71722173-f4e7-43f3-b269-298e46a2dd46)
-    (property "Reference" "D?" (id 0) (at 118.11 150.6093 0))
+    (property "Reference" "D5" (id 0) (at 118.11 150.6093 0))
     (property "Value" "WS2812B" (id 1) (at 118.11 153.1493 0))
     (property "Footprint" "LED_SMD:LED_WS2812B_PLCC4_5.0x5.0mm_P3.2mm" (id 2) (at 105.41 162.56 0)
       (effects (font (size 1.27 1.27)) (justify left top) hide)
@@ -1021,7 +1021,7 @@
       (reference "D4") (unit 1) (value "WS2812B") (footprint "LED_SMD:LED_WS2812B_PLCC4_5.0x5.0mm_P3.2mm")
     )
     (path "/71722173-f4e7-43f3-b269-298e46a2dd46"
-      (reference "D?") (unit 1) (value "WS2812B") (footprint "LED_SMD:LED_WS2812B_PLCC4_5.0x5.0mm_P3.2mm")
+      (reference "D5") (unit 1) (value "WS2812B") (footprint "LED_SMD:LED_WS2812B_PLCC4_5.0x5.0mm_P3.2mm")
     )
   )
 )
