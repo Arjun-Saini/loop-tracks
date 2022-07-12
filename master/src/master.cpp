@@ -31,18 +31,18 @@ Railway blueLine = Railway(
 );
 
 Railway brownLine = Railway(
-  {Checkpoint(41.885840, -87.633990), Checkpoint(41.885921, -87.626137), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.885840, -87.633990), Checkpoint(41.9103656, -87.6373962), Checkpoint(41.9107586, -87.648068)},
-  {5, 5, 5, 5, 15, 5},
-  {0, 20, 20, 0},
+  {Checkpoint(41.9107586, -87.648068), Checkpoint(41.9103656, -87.6373962), Checkpoint(41.885840, -87.633990), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.885921, -87.626137), Checkpoint(41.885840, -87.633990)},
+  {5, 15, 10, 10, 10, 10},
+  {20, 0, 40, 0},
   "brown",
   {"FFFF00", "0A0A00"},
-  {0, 4, 0, 0}
+  {2, 6, 0, 0}
 );
 
 Railway greenLine = Railway(
   {Checkpoint(41.853115, -87.626402), Checkpoint(41.876946, -87.626046), Checkpoint(41.885921, -87.626137), Checkpoint(41.885724, -87.633945), Checkpoint(41.88422, -87.696234)},
-  {15, 5, 5, 15},
-  {15, 15, 10, 0},
+  {15, 10, 10, 15},
+  {15, 15, 20, 0},
   "green",
   {"00FF00", "000A00"},
   {1, 3, 0, 0}
@@ -50,26 +50,26 @@ Railway greenLine = Railway(
 
 Railway orangeLine = Railway(
   {Checkpoint(41.84678, -87.648088), Checkpoint(41.85817, -87.627117), Checkpoint(41.875689, -87.626019), Checkpoint(41.876955, -87.626044), Checkpoint(41.885921, -87.626137), Checkpoint(41.885840, -87.633990), Checkpoint(41.876835, -87.633710), Checkpoint(41.8767992, -87.6255196)},
-  {12, 7, 1, 5, 5, 5, 5},
-  {12, 0, 20, 8},
+  {12, 7, 1, 10, 10, 10, 10},
+  {12, 0, 40, 8},
   "orange",
   {"FF8000", "0A0500"},
   {3, 7, 1, 3}
 );
 
 Railway purpleLine = Railway(
-  {Checkpoint(41.885840, -87.633990), Checkpoint(41.885921, -87.626137), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.885840, -87.633990), Checkpoint(41.9103656, -87.6373962), Checkpoint(41.9107586, -87.648068)},
-  {5, 5, 5, 5, 15, 5},
-  {0, 20, 20, 0},
+  {Checkpoint(41.9107586, -87.648068), Checkpoint(41.9103656, -87.6373962), Checkpoint(41.885840, -87.633990), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.885921, -87.626137), Checkpoint(41.885840, -87.633990)},
+  {5, 15, 10, 10, 10, 10},
+  {20, 0, 40, 0},
   "purple",
   {"2000FF", "02000A"},
-  {0, 4, 0, 0}
+  {2, 6, 0, 0}
 );
 
 Railway pinkLine = Railway(
   {Checkpoint(41.853964, -87.705408), Checkpoint(41.854856, -87.6695341), Checkpoint(41.8849389, -87.6696133), Checkpoint(41.885840, -87.633990), Checkpoint(41.885921, -87.626137), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.885840, -87.633990)},
-  {7, 7, 6, 5, 5, 5, 5},
-  {14, 0, 20, 6},
+  {7, 7, 6, 10, 10, 10, 10},
+  {14, 0, 40, 6},
   "pink",
   {"FF8080", "0A0505"},
   {3, 7, 2, 3}
@@ -130,11 +130,11 @@ void setup() {
   request.hostname = "trek.thewcl.com";
   request.port = 80;
 
-  brownLine.setLoopIndex(4, 0);
+  brownLine.setLoopIndex(2, 6);
   orangeLine.setLoopIndex(3, 7);
-  purpleLine.setLoopIndex(4, 0);
+  purpleLine.setLoopIndex(2, 6);
   pinkLine.setLoopIndex(3, 7);
-  railways = {brownLine, purpleLine, orangeLine, pinkLine, greenLine};
+  railways = {brownLine, orangeLine, pinkLine, purpleLine, greenLine};
 
   sequenceArr = std::vector<int>(railways.size() * 2, 0);
 
@@ -315,29 +315,17 @@ void loop(){
           else if(closestIndex < currentRailway.lowerLoopBound || secondClosestIndex < currentRailway.lowerLoopBound){
             lowerScaleBound = 0;
             pcbSegment = 0;
-            //Serial.println("before");
           }
           //after loop, also for lines that don't go through loop
           else if(closestIndex > currentRailway.upperLoopBound || secondClosestIndex > currentRailway.upperLoopBound){
             lowerScaleBound = currentRailway.upperLoopBound;
             pcbSegment = 1;
-            //Serial.println("after");
           }
           //in loop
           else{
             inLoop = true;
             lowerScaleBound = currentRailway.lowerLoopBound;
             pcbSegment = 2;
-            //Serial.println("in loop");
-
-            //train heading fixes
-            if(currentRailway.name == brownLine.name){
-              trainDir = 5;
-            }else if(currentRailway.name == pinkLine.name || currentRailway.name == orangeLine.name || currentRailway.name == purpleLine.name){
-              trainDir = 1;
-            }else if(currentRailway.name == greenLine.name){
-              trainDir = 6 - trainDir;
-            }
           }
 
           for(int i = lowerScaleBound; i < lowerIndex; i++){
@@ -355,10 +343,14 @@ void loop(){
           
           if(inLoop){
             //adjusts output array orientation to match brown line
-            if(currentRailway.name == orangeLine.name && inLoop){
-              segmentPos = (int)((1.5 * (float)currentRailway.outputs[2].size()) - segmentPos) % currentRailway.outputs[2].size();
-            }else if(currentRailway.name == greenLine.name && inLoop){
-              segmentPos = (currentRailway.outputs[2].size() - (int)floor(segmentPos));
+            if(currentRailway.name == pinkLine.name){
+              segmentPos = (float)currentRailway.outputs[2].size() - segmentPos;
+            }else if(currentRailway.name == orangeLine.name){
+              segmentPos = (int)(segmentPos + 20) % 40;
+            }
+          }else{
+            if(currentRailway.name == brownLine.name){
+              trainDir = 6 - trainDir;
             }
           }
           if(pcbSegment == 1 && currentRailway.name == greenLine.name){
@@ -405,6 +397,27 @@ void loop(){
           Wire.beginTransmission(sequenceArr[j * 2 + i]);
         }
 
+        if(i == 2){
+          //pads green line sending to loop
+          if(currentRailway.name == greenLine.name){
+            for(int j = 0; j < brownLine.outputs[0].size() + (brownLine.outputs[2].size() / 2); j++){
+              Wire.write('0');
+            }
+          }
+          //prevents brown/purple line from getting overriden
+          else if(currentRailway.name == brownLine.name || currentRailway.name == purpleLine.name){
+            for(int j = 0; j < brownLine.outputs[0].size(); j++){
+              Wire.write((char)currentRailway.outputs[0][j] + '0');
+            }
+          }
+          //pads every other line sending to loop
+          else{
+            for(int j = 0; j < brownLine.outputs[0].size(); j++){
+              Wire.write('0');
+            }
+          }
+        }
+
         //pads blank loop onto the brown/purple track
         if(i == 1 && (currentRailway.name == brownLine.name || currentRailway.name == purpleLine.name)){
           for(int j = 0; j < currentRailway.outputs[2].size(); j++){
@@ -428,10 +441,15 @@ void loop(){
         for(int j = 0; j < currentRailway.outputs[i].size(); j++){
           Wire.write((char)currentRailway.outputs[i][j] + '0');
           Serial.print(currentRailway.outputs[i][j]);
-          currentRailway.outputs[i][j] = 0;
+          //currentRailway.outputs[i][j] = 0;
         }
         Serial.println();
         Wire.endTransmission();
+      }
+      for(int i = 0; i < 4; i++){
+        for(int j = 0; j < currentRailway.outputs[i].size(); j++){
+          currentRailway.outputs[i][j] = 0;
+        }
       }
       Serial.println();
     }
