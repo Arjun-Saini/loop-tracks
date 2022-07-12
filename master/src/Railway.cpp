@@ -24,8 +24,8 @@ class Railway{
       colors = colorInput;
       lowerLoopBound = boundInput[0];
       upperLoopBound = boundInput[1];
-      lowerGreenBound = boundInput[3];
-      upperGreenBound = boundInput[4];
+      lowerGreenBound = boundInput[2];
+      upperGreenBound = boundInput[3];
     }
 
     //loopIndex must point to either the first or last checkpoint, tripleIndex cannot be 0
