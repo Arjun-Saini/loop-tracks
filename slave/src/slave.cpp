@@ -59,6 +59,7 @@ void loop() {
 char c;
 
 void dataReceived(int count){
+  Serial.println("data recieve start");
   int size = Wire.available();
   char inputBuffer[size];
   int counter = 0;
@@ -141,6 +142,7 @@ void dataRequest(){
     case 1:{
       Serial.println("request mode 1");
       Wire.write(deviceID);
+      Serial.println("1 write");
       break;
     }
     case 2:{
