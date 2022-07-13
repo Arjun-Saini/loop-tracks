@@ -1,3 +1,5 @@
+SYSTEM_MODE(MANUAL)
+
 #include "HttpClient.h"
 #include "JsonParserGeneratorRK.h"
 #include "Railway.cpp"
@@ -74,7 +76,7 @@ int greenLineAdr[2] = {0, 0};
 
 std::vector<int> addressArr = std::vector<int>(slaveCountExpected, 0);
 std::vector<int> sequenceArr; //organizes i2c addresses from addressArr
-int slaveCount, bleCount;
+int slaveCount;
 
 void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context);
 
@@ -95,6 +97,9 @@ http_response_t response;
 
 HttpClient http;
 JsonParserStatic<10000, 1000> parser;
+
+String SSID = "";
+String password = "";
 
 bool userInput = false;
 
@@ -128,20 +133,21 @@ void setup() {
   sequenceArr = std::vector<int>(railways.size() * 2, 0);
 
   randomizeAddress();
+  WiFi.clearCredentials();
+  //while(!BLE.connected()){}
 }
 
 void loop(){
-  Serial.println("loop start");
-  for(int i : sequenceArr){
-    Serial.printf("%i, ", i);
-  }
-  Serial.println();
-  Serial.println(brownLineAdr);
-  Serial.println(greenLineAdr[0]);
-  Serial.println(greenLineAdr[1]);
-  
-  //while(userInput){
-    //loop through each train, loop breaks when all trains have been parsed
+  if(WiFi.hasCredentials() && userInput){
+    Serial.println("loop start");
+    for(int i : sequenceArr){
+      Serial.printf("%i, ", i);
+    }
+    Serial.println();
+    Serial.println(brownLineAdr);
+    Serial.println(greenLineAdr[0]);
+    Serial.println(greenLineAdr[1]);
+
     for(int j = 0; j < railways.size(); j++){
       delay(1000);
       // request.path = "/api/1.0/ttpositions.aspx?key=00ff09063caa46748434d5fa321d048f&rt=" + String(railways[j].name.c_str()) + "&outputType=JSON";
@@ -159,6 +165,8 @@ void loop(){
       int count = 0;
       Railway currentRailway = railways[j];
       std::vector<Checkpoint> currentCheckpoints = currentRailway.checkpoints;
+
+      //loop through each train, loop breaks when all trains have been parsed
       while(true){
         // JsonReference train = parser.getReference().key("ctatt").key("route").index(0).key("train").index(count);
         // String nextStation = train.key("nextStaNm").valueString();
@@ -445,8 +453,7 @@ void loop(){
       Serial.println();
     }
     Serial.println();
-  //}
-  Serial.println();
+  }
 }
 
 //clears up conflicts with multiple i2c slaves having the same address
@@ -510,88 +517,90 @@ void randomizeAddress(){
     }
   }
 
-  int seqCount = 0;
-  for(int i = 0; i < railways.size(); i++){
-    for(int j = 0; j < 2; j++){
-      if(railways[i].outputs[j].size() == 0 || railways[i].name == purpleLine.name){
-        sequenceArr[2 * i + j] = 0;
-      }else{
-        sequenceArr[2 * i + j] = addressArr[seqCount++];
-        if(railways[i].name == brownLine.name){
-          brownLineAdr = sequenceArr[2 * i + j];
-        }else if(railways[i].name == greenLine.name){
-          greenLineAdr[0] = sequenceArr[2 * i];
-          greenLineAdr[1] = sequenceArr[2 * i + 1];
-        }
-      }
-    }
-  }
+  // int seqCount = 0;
+  // for(int i = 0; i < railways.size(); i++){
+  //   for(int j = 0; j < 2; j++){
+  //     if(railways[i].outputs[j].size() == 0 || railways[i].name == purpleLine.name){
+  //       sequenceArr[2 * i + j] = 0;
+  //     }else{
+  //       sequenceArr[2 * i + j] = addressArr[seqCount++];
+  //       if(railways[i].name == brownLine.name){
+  //         brownLineAdr = sequenceArr[2 * i + j];
+  //       }else if(railways[i].name == greenLine.name){
+  //         greenLineAdr[0] = sequenceArr[2 * i];
+  //         greenLineAdr[1] = sequenceArr[2 * i + 1];
+  //       }
+  //     }
+  //   }
+  // }
 }
 
+int bleCount = 0;
+int railwayIndex = -1;
 void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context){
   String inputBuffer = "";
-
-  if(bleCount <= slaveCountExpected){
-    for(int i = 0; i < len - 1; i++){
-      inputBuffer += (char)data[i];
-      //input = atoi(inputBuffer);
+  for(int i = 0; i < len - 1; i++){
+    inputBuffer += (char)data[i];
+    //input = atoi(inputBuffer);
+  }
+  Serial.println(inputBuffer);
+  switch(bleCount){
+    case 0:{
+      SSID = inputBuffer;
+      break;
     }
+    case 1:{
+      password = inputBuffer;
+      WiFi.setCredentials(SSID, password);
 
-    if(bleCount < slaveCountExpected){
-      txCharacteristic.setValue("\nEnter the line color of the device with the blinking LED: ");
-    }
-
-    Wire.beginTransmission(addressArr[bleCount]);
-    Wire.write('3');
-    Wire.endTransmission();
-
-    if(bleCount > 0){
-      int colorAdr = 0;
-      if(inputBuffer == "red"){
-        Serial.println("receive red");
-        colorAdr = 0;
-      }else if(inputBuffer == "blue"){
-        Serial.println("receive blue");
-        colorAdr = 1;
-      }else if(inputBuffer == "green"){
-        Serial.println("receive green");
-        colorAdr = 2;
-      }
-      // Wire.beginTransmission(addressArr[bleCount - 1]);
-      // Wire.write(String(railways.at(colorAdr).colors.at(0).c_str()));
-      // Wire.write(String(railways.at(colorAdr).colors.at(1).c_str()));
-      // Wire.endTransmission();
-
-      sequenceArr[bleCount - 1] = addressArr[colorAdr];
-      
-      Wire.beginTransmission(addressArr[bleCount - 1]);
-      Wire.write('4');
+      Wire.beginTransmission(addressArr[0]);
+      Wire.write('3');
       Wire.endTransmission();
-      if(bleCount == slaveCountExpected){
-        userInput = true;
+      break;
+    }
+    default:{
+      if(bleCount - 2 < railways.size()){
+        //finds which rail the address should be set to
+        for(int i = 0; i < railways.size(); i++){
+          if(String(railways[i].name.c_str()) == inputBuffer){
+            railwayIndex = i;
+          }
+        }
+        if(railwayIndex == -1){
+          bleCount--;
+          break;
+        }
+
+        for(int i = 0; i < 2; i++){
+          if(railways[railwayIndex].outputs[i].size() == 0 || railways[railwayIndex].name == purpleLine.name){
+            sequenceArr[2 * railwayIndex + i] = 0;
+          }else{
+            sequenceArr[2 * railwayIndex + i] = addressArr[bleCount - 2];
+            if(railways[i].name == brownLine.name){
+            brownLineAdr = sequenceArr[2 * railwayIndex + i];
+            }else if(railways[i].name == greenLine.name){
+              greenLineAdr[0] = sequenceArr[2 * railwayIndex];
+              greenLineAdr[1] = sequenceArr[2 * railwayIndex + 1];
+            }
+          }
+        }
+        Wire.beginTransmission(addressArr[bleCount - 2]);
+        Wire.write('4');
+        Wire.endTransmission();
+
+        Wire.beginTransmission(addressArr[bleCount - 1]);
+        Wire.write('3');
+        Wire.endTransmission();
       }
+      if(bleCount - 2 == railways.size() - 1){
+        Serial.println("BLE finished");
+        userInput = true;
+        WiFi.on();
+        WiFi.connect();
+      }
+      break;
     }
   }
-
-  if(bleCount == slaveCountExpected){
-    delay(1000);
-    Serial.println("\nSequence: ");
-    for(int i = 0; i < slaveCountExpected; i++){
-      Serial.print(sequenceArr[i]);
-      Serial.print(", ");
-
-      // Wire.beginTransmission(sequenceArr[i]);
-      // Wire.write('3');
-      // Wire.endTransmission();
-      // delay(2000);
-      // Wire.beginTransmission(sequenceArr[i]);
-      // Wire.write('4');
-      // Wire.endTransmission();
-    }
-    // BLE.disconnect();
-    // BLE.off();
-  }
-
   bleCount++;
 }
 
