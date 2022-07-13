@@ -90,7 +90,6 @@ std::vector<Railway> ctaRailways;
 
 constexpr size_t I2C_BUFFER_SIZE = 512;
 
-std::vector<int> slaveCountExpected = {5}; //green adds 2, purple adds 0, every other line adds 1 (7 for full CTA without yellow line)
 int brownLineCTAAdr = 0;
 int greenLineCTAAdr[2] = {0, 0};
 
@@ -151,7 +150,7 @@ void setup() {
   purpleLineCTA.setLoopIndex(2, 6);
   pinkLineCTA.setLoopIndex(3, 7);
   ctaRailways = {brownLineCTA, orangeLineCTA, pinkLineCTA, purpleLineCTA, greenLineCTA};
-  cities = {City(ctaRailways, "chicago")};
+  cities = {City(ctaRailways, "chicago", 5)};
 
   //randomizeAddress();
   WiFi.clearCredentials();
@@ -326,7 +325,6 @@ void loop(){
           if(closestIndex <= currentRailway.upperGreenBound && closestIndex >= currentRailway.lowerGreenBound && secondClosestIndex <= currentRailway.upperGreenBound && secondClosestIndex >= currentRailway.lowerGreenBound){
             pcbSegment = 3;
             lowerScaleBound = currentRailway.lowerGreenBound;
-            Serial.println("in green");
           }
           //before loop
           else if(closestIndex < currentRailway.lowerLoopBound || secondClosestIndex < currentRailway.lowerLoopBound){
@@ -349,26 +347,28 @@ void loop(){
             segmentPos += currentRailway.scalers[i];
           }
           
-          if(inLoop){
-            //adjusts output array orientation to match brown line
-            if(currentRailway.name == pinkLineCTA.name){
-              segmentPos = (float)currentRailway.outputs[2].size() - segmentPos;
-            }else if(currentRailway.name == orangeLineCTA.name){
-              segmentPos = (int)(segmentPos + orangeLineCTA.outputs[2].size() / 2) % orangeLineCTA.outputs[2].size();
-            }else if(currentRailway.name == purpleLineCTA.name){
-              trainDir == 1;
+          if(cityIndex == 0){
+            if(inLoop){
+              //adjusts output array orientation to match brown line
+              if(currentRailway.name == pinkLineCTA.name){
+                segmentPos = (float)currentRailway.outputs[2].size() - segmentPos;
+              }else if(currentRailway.name == orangeLineCTA.name){
+                segmentPos = (int)(segmentPos + orangeLineCTA.outputs[2].size() / 2) % orangeLineCTA.outputs[2].size();
+              }else if(currentRailway.name == purpleLineCTA.name){
+                trainDir == 1;
+              }
+            }else{
+              if(currentRailway.name == brownLineCTA.name || currentRailway.name == purpleLineCTA.name){
+                trainDir = 6 - trainDir;
+              }
             }
-          }else{
-            if(currentRailway.name == brownLineCTA.name || currentRailway.name == purpleLineCTA.name){
+            if(pcbSegment == 1 && currentRailway.name == greenLineCTA.name){
+              segmentPos = (float)currentRailway.outputs[1].size() - segmentPos;
               trainDir = 6 - trainDir;
             }
-          }
-          if(pcbSegment == 1 && currentRailway.name == greenLineCTA.name){
-            segmentPos = (float)currentRailway.outputs[1].size() - segmentPos;
-            trainDir = 6 - trainDir;
-          }
-          if(pcbSegment == 3 && currentRailway.name == pinkLineCTA.name){
-            trainDir = 6 - trainDir;
+            if(pcbSegment == 3 && currentRailway.name == pinkLineCTA.name){
+              trainDir = 6 - trainDir;
+            }
           }
           currentRailway.outputs[pcbSegment][(int)floor(segmentPos)] = trainDir;
         }
@@ -472,7 +472,7 @@ void loop(){
 
 //clears up conflicts with multiple i2c slaves having the same address
 void randomizeAddress(){
-  while(slaveCount != slaveCountExpected[cityIndex]){
+  while(slaveCount != cities[cityIndex].slaveCountExpected){
     slaveCount = 0;
     for(int i = 8; i <= 119; i++){
       Serial.println("\nrequest code 1, address: " + String(i));
@@ -565,7 +565,7 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
         break;
       }
       sequenceArr = std::vector<int>(cities[cityIndex].railways.size() * 2, 0);
-      addressArr = std::vector<int>(slaveCountExpected[cityIndex], 0);
+      addressArr = std::vector<int>(cities[cityIndex].slaveCountExpected, 0);
       randomizeAddress();
 
       //turn on led on first device
