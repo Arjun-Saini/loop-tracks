@@ -85,8 +85,44 @@ Railway pinkLineCTA = Railway(
   {3, 7, 2, 3}
 );
 
+Railway redLineMBTA = Railway{
+  {Checkpoint(42.320414, -71.052139), Checkpoint(42.327649, -71.057760), Checkpoint(42.344627, -71.056986), Checkpoint(42.350559, -71.052613), Checkpoint(42.360982, -71.070116), Checkpoint(42.363490, -71.100487), Checkpoint(42.372535, -71.115947)},
+  {5, 10, 5, 10, 10, 10},
+  {0, 50, 0, 0},
+  "red",
+  {"FF0000", "0A0000"},
+  {0, 0, 0, 0},
+};
+
+Railway blueLineMBTA = Railway{
+  {Checkpoint(42.379558, -71.022962), Checkpoint(42.359979, -71.047712), },
+  {5, 10, 5, 10, 10, 10},
+  {0, 50, 0, 0},
+  "blue",
+  {"0000FF", "00000A"},
+  {0, 0, 0, 0},
+};
+
+Railway orangeLineMBTA = Railway{
+  {},
+  {5, 10, 5, 10, 10, 10},
+  {0, 50, 0, 0},
+  "orange",
+  {"FF8000", "0A0500"},
+  {0, 0, 0, 0},
+};
+
+Railway greenLineMBTA = Railway{
+  {},
+  {5, 10, 5, 10, 10, 10},
+  {0, 50, 0, 0},
+  "green",
+  {"00FF00", "000A00"},
+  {0, 0, 0, 0},
+};
+
 std::vector<City> cities;
-std::vector<Railway> ctaRailways;
+std::vector<Railway> ctaRailways, mbtaRailways;
 
 constexpr size_t I2C_BUFFER_SIZE = 512;
 
@@ -126,9 +162,11 @@ String password = "";
 
 bool userInput = false;
 
+int bleCount = 0;
 int cityIndex = -1;
+int railwayIndex = -1;
 
-void setup() {
+void setup(){
   Serial.begin(9600);
   delay(500);
 
@@ -154,7 +192,9 @@ void setup() {
   purpleLineCTA.setLoopIndex(2, 6);
   pinkLineCTA.setLoopIndex(3, 7);
   ctaRailways = {brownLineCTA, orangeLineCTA, pinkLineCTA, purpleLineCTA, greenLineCTA};
-  cities = {City(ctaRailways, "chicago", 5)};
+  mbtaRailways = {redLineMBTA};
+  
+  cities = {City(ctaRailways, "cta", 5), City(mbtaRailways, "mbta", 1)};
 
   //randomizeAddress();
   WiFi.clearCredentials();
@@ -167,14 +207,14 @@ void loop(){
       Serial.printf("%i, ", i);
     }
     Serial.println();
-    Serial.println(brownLineCTAAdr);
-    Serial.println(greenLineCTAAdr[0]);
-    Serial.println(greenLineCTAAdr[1]);
+    // Serial.println(brownLineCTAAdr);
+    // Serial.println(greenLineCTAAdr[0]);
+    // Serial.println(greenLineCTAAdr[1]);
 
     for(int j = 0; j < cities[cityIndex].railways.size(); j++){
       delay(1000);
       // request.path = "/api/1.0/ttpositions.aspx?key=00ff09063caa46748434d5fa321d048f&rt=" + String(railways[j].name.c_str()) + "&outputType=JSON";
-      request.path = "/loop-tracks/cta?lines=" + String(cities[cityIndex].railways[j].name.c_str());
+      request.path = "/loop-tracks/" + String(cities[cityIndex].name.c_str()) + "?lines=" + String(cities[cityIndex].railways[j].name.c_str());
       http.get(request, response, headers);
 
       Serial.println("parsing");
@@ -537,37 +577,33 @@ void randomizeAddress(){
   }
 }
 
-int bleCount = 0;
-int railwayIndex = -1;
 void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context){
   txCharacteristic.setValue("ok");
   String inputBuffer = "";
   String nameBuffer;
-  for(int i = 0; i < len - 1; i++){
+  for(int i = 0; i < len; i++){
     inputBuffer += (char)data[i];
-    //input = atoi(inputBuffer);
   }
   Serial.println(inputBuffer);
-  switch(bleCount){
-    case 0:{
-      SSID = inputBuffer;
-      break;
-    }
-    case 1:{
-      password = inputBuffer;
-      WiFi.setCredentials(SSID, password);
-      break;
-    }case 2:{
-      //city selection
-      for(int i = 0; i < cities.size(); i++){
-        if(inputBuffer == String(cities[i].name.c_str())){
-          cityIndex = i;
-          break;
-        }
+
+  //set wifi credentials
+  if(inputBuffer.indexOf("wifi:") == 0){
+    int commaIndex = inputBuffer.indexOf(",");
+    SSID = inputBuffer.substring(5, commaIndex);
+    password = inputBuffer.substring(commaIndex + 1);
+    Serial.printlnf("SSID: %s, password: %s", SSID.c_str(), password.c_str());
+    WiFi.setCredentials(SSID, password);
+  }
+  //set city
+  else if(inputBuffer.indexOf("city:") == 0){
+    inputBuffer = inputBuffer.substring(5);
+    for(int i = 0; i < cities.size(); i++){
+      if(inputBuffer == String(cities[i].name.c_str())){
+        cityIndex = i;
       }
       if(cityIndex == -1){
-        bleCount--;
-        break;
+        txCharacteristic.setValue("incorrect city name");
+        return;
       }
       sequenceArr = std::vector<int>(cities[cityIndex].railways.size() * 2, 0);
       addressArr = std::vector<int>(cities[cityIndex].slaveCountExpected, 0);
@@ -577,64 +613,70 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
       Wire.beginTransmission(addressArr[0]);
       Wire.write('3');
       Wire.endTransmission();
-      break;
     }
-    default:{
-      nameBuffer = inputBuffer;
-      int index = bleCount - 3;
-      if(index < cities[cityIndex].railways.size()){
-        if(cityIndex == 0 && (inputBuffer == "green1" || inputBuffer == "green2")){
-          nameBuffer = String(greenLineCTA.name.c_str());
-        }
+    Serial.printlnf("city: %s", cities[cityIndex].name.c_str());
+  }
+  //set lines
+  else if(inputBuffer.indexOf("color:") == 0){
+    if(cityIndex == -1){
+      txCharacteristic.setValue("city not set");
+      return;
+    }
+    inputBuffer = inputBuffer.substring(6);
+    nameBuffer = inputBuffer;
+    Serial.println(inputBuffer);
+    if(bleCount < cities[cityIndex].railways.size()){
+      if(cityIndex == 0 && (inputBuffer == "green1" || inputBuffer == "green2")){
+        nameBuffer = String(greenLineCTA.name.c_str());
+        Serial.println("green fix");
+      }
 
-        //finds which rail the address should be set to
-        for(int i = 0; i < cities[cityIndex].railways.size(); i++){
-          if((cityIndex != 0 || nameBuffer != String(purpleLineCTA.name.c_str())) && String(cities[cityIndex].railways[i].name.c_str()) == nameBuffer){
-            railwayIndex = i;
-          }
+      //finds which rail the address should be set to
+      for(int i = 0; i < cities[cityIndex].railways.size(); i++){
+        if((cityIndex != 0 || nameBuffer != String(purpleLineCTA.name.c_str())) && String(cities[cityIndex].railways[i].name.c_str()) == nameBuffer){
+          railwayIndex = i;
         }
-        if(railwayIndex == -1){
-          bleCount--;
-          break;
-        }
+      }
+      if(railwayIndex == -1){
+        txCharacteristic.setValue("incorrect railway color");
+        return;
+      }
 
-        //organizes address into sequenceArr
-        for(int i = 0; i < 2; i++){
-          if(cities[cityIndex].railways[railwayIndex].outputs[i].size() == 0 || (cityIndex == 0 && cities[cityIndex].railways[railwayIndex].name == purpleLineCTA.name)){
-            sequenceArr[2 * railwayIndex + i] = 0;
-          }else{
-            sequenceArr[2 * railwayIndex + i] = addressArr[index];
-            if(cityIndex == 0){
-              if(inputBuffer == String(brownLineCTA.name.c_str())){
-              brownLineCTAAdr = sequenceArr[2 * railwayIndex + i];
-              }else if(inputBuffer == "green1"){
-                greenLineCTAAdr[0] = sequenceArr[2 * railwayIndex];
-              }else if(inputBuffer == "green2"){
-                greenLineCTAAdr[1] = sequenceArr[2 * railwayIndex + 1];
-              }
+      //organizes address into sequenceArr
+      for(int i = 0; i < 2; i++){
+        if(cities[cityIndex].railways[railwayIndex].outputs[i].size() == 0 || (cityIndex == 0 && cities[cityIndex].railways[railwayIndex].name == purpleLineCTA.name)){
+          sequenceArr[2 * railwayIndex + i] = 0;
+        }else{
+          sequenceArr[2 * railwayIndex + i] = addressArr[bleCount];
+          if(cityIndex == 0){
+            if(inputBuffer == String(brownLineCTA.name.c_str())){
+            brownLineCTAAdr = sequenceArr[2 * railwayIndex + i];
+            }else if(inputBuffer == "green1"){
+              greenLineCTAAdr[0] = sequenceArr[2 * railwayIndex];
+            }else if(inputBuffer == "green2"){
+              greenLineCTAAdr[1] = sequenceArr[2 * railwayIndex + 1];
             }
           }
         }
-
-        //turn off led, turn next device led on
-        Wire.beginTransmission(addressArr[index]);
-        Wire.write('4');
-        Wire.endTransmission();
-
-        Wire.beginTransmission(addressArr[index + 1]);
-        Wire.write('3');
-        Wire.endTransmission();
       }
-      if(index == cities[cityIndex].railways.size() - 1){
-        Serial.println("BLE finished");
-        userInput = true;
-        WiFi.on();
-        WiFi.connect();
-      }
-      break;
+
+      //turn off led, turn next device led on
+      Wire.beginTransmission(addressArr[bleCount]);
+      Wire.write('4');
+      Wire.endTransmission();
+
+      Wire.beginTransmission(addressArr[bleCount + 1]);
+      Wire.write('3');
+      Wire.endTransmission();
     }
+    if(bleCount == cities[cityIndex].railways.size() - 1){
+      Serial.println("BLE finished");
+      userInput = true;
+      WiFi.on();
+      WiFi.connect();
+    }
+    bleCount++;
   }
-  bleCount++;
 }
 
 hal_i2c_config_t acquireWireBuffer() {
