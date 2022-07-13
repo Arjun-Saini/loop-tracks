@@ -539,6 +539,7 @@ int bleCount = 0;
 int railwayIndex = -1;
 void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context){
   String inputBuffer = "";
+  String nameBuffer;
   for(int i = 0; i < len - 1; i++){
     inputBuffer += (char)data[i];
     //input = atoi(inputBuffer);
@@ -559,10 +560,15 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
       break;
     }
     default:{
+      nameBuffer = inputBuffer;
       if(bleCount - 2 < railways.size()){
+        if(inputBuffer == "green1" || inputBuffer == "green2"){
+          nameBuffer = String(greenLine.name.c_str());
+        }
+
         //finds which rail the address should be set to
         for(int i = 0; i < railways.size(); i++){
-          if(String(railways[i].name.c_str()) == inputBuffer){
+          if(nameBuffer != String(purpleLine.name.c_str()) && String(railways[i].name.c_str()) == nameBuffer){
             railwayIndex = i;
           }
         }
@@ -576,10 +582,11 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
             sequenceArr[2 * railwayIndex + i] = 0;
           }else{
             sequenceArr[2 * railwayIndex + i] = addressArr[bleCount - 2];
-            if(railways[i].name == brownLine.name){
+            if(inputBuffer == String(brownLine.name.c_str())){
             brownLineAdr = sequenceArr[2 * railwayIndex + i];
-            }else if(railways[i].name == greenLine.name){
+            }else if(inputBuffer == "green1"){
               greenLineAdr[0] = sequenceArr[2 * railwayIndex];
+            }else if(inputBuffer == "green2"){
               greenLineAdr[1] = sequenceArr[2 * railwayIndex + 1];
             }
           }
