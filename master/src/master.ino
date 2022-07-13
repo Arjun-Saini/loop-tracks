@@ -4,13 +4,20 @@ SYSTEM_MODE(MANUAL)
 #include "JsonParserGeneratorRK.h"
 #include "Railway.cpp"
 
-//all loop scalers must be the same, brown line receives all loop data
+/*
+all loop segment sizes must be the same
+brown line receives all loop data
+no output segment can be 12 or 24 pixels long, causes conflict with slave protocol
+*/
+
 Railway redLine = Railway(
+  //checkpoint vector, should be a checkpoint at each bend/turn, no 3 checkpoints can form an angle smaller than 90 degrees
   {Checkpoint(41.853028, -87.63109), Checkpoint(41.9041, -87.628921), Checkpoint(41.903888, -87.639506), Checkpoint(41.913732, -87.652380), Checkpoint(41.9253, -87.65286)},
-  {25, 3, 7, 5},
-  {0, 40, 0, 0},
+  {25, 3, 7, 5}, //pixels in between each checkpoint, should have 1 less element than checkpoint vector
+  {0, 40, 0, 0}, //size of each output segment: before loop, after loop, in loop, in green
   "red",
-  {"FF0000", "0A0000"}
+  {"FF0000", "0A0000"}, //hex color values for head and body/tail of the train
+  {0, 0, 0, 0} //checkpoint bounds for lower loop, upper loop, lower green, upper green
 );
 
 Railway blueLine = Railway(
@@ -18,7 +25,8 @@ Railway blueLine = Railway(
   {12, 8, 5, 5, 5, 25},
   {0, 60, 0, 0},
   "blue",
-  {"0000FF", "00000A"}
+  {"0000FF", "00000A"},
+  {0, 0, 0, 0}
 );
 
 Railway brownLine = Railway(
@@ -134,7 +142,6 @@ void setup() {
 
   randomizeAddress();
   WiFi.clearCredentials();
-  //while(!BLE.connected()){}
 }
 
 void loop(){
@@ -466,6 +473,7 @@ void randomizeAddress(){
       Wire.write('1');
       Wire.endTransmission();
 
+      //gets UUID from address and sends it back to slave, slave changes address if conflict
       Wire.requestFrom(i, 24);
       if(Wire.available() > 0){
         Serial.println("transmission recieved from: " + String(i));
@@ -516,23 +524,6 @@ void randomizeAddress(){
       addressArr[count++] = i;
     }
   }
-
-  // int seqCount = 0;
-  // for(int i = 0; i < railways.size(); i++){
-  //   for(int j = 0; j < 2; j++){
-  //     if(railways[i].outputs[j].size() == 0 || railways[i].name == purpleLine.name){
-  //       sequenceArr[2 * i + j] = 0;
-  //     }else{
-  //       sequenceArr[2 * i + j] = addressArr[seqCount++];
-  //       if(railways[i].name == brownLine.name){
-  //         brownLineAdr = sequenceArr[2 * i + j];
-  //       }else if(railways[i].name == greenLine.name){
-  //         greenLineAdr[0] = sequenceArr[2 * i];
-  //         greenLineAdr[1] = sequenceArr[2 * i + 1];
-  //       }
-  //     }
-  //   }
-  // }
 }
 
 int bleCount = 0;
@@ -554,6 +545,7 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
       password = inputBuffer;
       WiFi.setCredentials(SSID, password);
 
+      //turn on led on first device
       Wire.beginTransmission(addressArr[0]);
       Wire.write('3');
       Wire.endTransmission();
@@ -577,6 +569,7 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
           break;
         }
 
+        //organizes address into sequenceArr
         for(int i = 0; i < 2; i++){
           if(railways[railwayIndex].outputs[i].size() == 0 || railways[railwayIndex].name == purpleLine.name){
             sequenceArr[2 * railwayIndex + i] = 0;
@@ -591,6 +584,8 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
             }
           }
         }
+
+        //turn off led, turn next device led on
         Wire.beginTransmission(addressArr[bleCount - 2]);
         Wire.write('4');
         Wire.endTransmission();

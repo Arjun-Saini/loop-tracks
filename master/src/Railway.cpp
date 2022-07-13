@@ -4,7 +4,6 @@
 //container for all data for each rail line
 class Railway{
   public:
-    //LinkedList checkpointList;
     std::vector<Checkpoint> checkpoints;
     std::vector<float> distances;
     std::vector<int> scalers;
