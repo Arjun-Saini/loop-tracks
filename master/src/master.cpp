@@ -17,12 +17,12 @@ SYSTEM_MODE(MANUAL)
 
 /*
 all loop segment sizes must be the same
-brown line receives all loop data
+brown line receives all loop data for cta
 no output segment can be 12 or 24 pixels long, causes conflict with slave protocol
 */
 
-Railway redLine = Railway(
-  //checkpoint vector, should be a checkpoint at each bend/turn, no 3 checkpoints can form an angle smaller than 90 degrees
+Railway redLineCTA = Railway(
+  //checkpoints in order starting at slave position, should be a checkpoint at each bend/turn, no 3 adjacent checkpoints can form an angle smaller than 90 degrees
   {Checkpoint(41.853028, -87.63109), Checkpoint(41.9041, -87.628921), Checkpoint(41.903888, -87.639506), Checkpoint(41.913732, -87.652380), Checkpoint(41.9253, -87.65286)},
   {25, 3, 7, 5}, //pixels in between each checkpoint, should have 1 less element than checkpoint vector
   {0, 40, 0, 0}, //size of each output segment: before loop, after loop, in loop, in green
@@ -31,7 +31,7 @@ Railway redLine = Railway(
   {0, 0, 0, 0} //checkpoint bounds for lower loop, upper loop, lower green, upper green
 );
 
-Railway blueLine = Railway(
+Railway blueLineCTA = Railway(
   {Checkpoint(41.873647, -87.727931), Checkpoint(41.875666, -87.672961), Checkpoint(41.875293, -87.640976), Checkpoint(41.875660, -87.627620), Checkpoint(41.885738, -87.629540), Checkpoint(41.885698, -87.639828), Checkpoint(41.915497, -87.686258)},
   {12, 8, 5, 5, 5, 25},
   {0, 60, 0, 0},
@@ -40,7 +40,7 @@ Railway blueLine = Railway(
   {0, 0, 0, 0}
 );
 
-Railway brownLine = Railway(
+Railway brownLineCTA = Railway(
   {Checkpoint(41.9107586, -87.648068), Checkpoint(41.9103656, -87.6373962), Checkpoint(41.885840, -87.633990), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.885921, -87.626137), Checkpoint(41.885840, -87.633990)},
   {5, 15, 10, 10, 10, 10},
   {20, 0, 40, 0},
@@ -49,7 +49,7 @@ Railway brownLine = Railway(
   {2, 6, 0, 0}
 );
 
-Railway greenLine = Railway(
+Railway greenLineCTA = Railway(
   {Checkpoint(41.853115, -87.626402), Checkpoint(41.876946, -87.626046), Checkpoint(41.885921, -87.626137), Checkpoint(41.885724, -87.633945), Checkpoint(41.88422, -87.696234)},
   {15, 10, 10, 15},
   {15, 15, 20, 0},
@@ -58,7 +58,7 @@ Railway greenLine = Railway(
   {1, 3, 0, 0}
 );
 
-Railway orangeLine = Railway(
+Railway orangeLineCTA = Railway(
   {Checkpoint(41.84678, -87.648088), Checkpoint(41.85817, -87.627117), Checkpoint(41.875689, -87.626019), Checkpoint(41.876955, -87.626044), Checkpoint(41.885921, -87.626137), Checkpoint(41.885840, -87.633990), Checkpoint(41.876835, -87.633710), Checkpoint(41.8767992, -87.6255196)},
   {12, 7, 1, 10, 10, 10, 10},
   {12, 0, 40, 8},
@@ -67,7 +67,7 @@ Railway orangeLine = Railway(
   {3, 7, 1, 3}
 );
 
-Railway purpleLine = Railway(
+Railway purpleLineCTA = Railway(
   {Checkpoint(41.9107586, -87.648068), Checkpoint(41.9103656, -87.6373962), Checkpoint(41.885840, -87.633990), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.885921, -87.626137), Checkpoint(41.885840, -87.633990)},
   {5, 15, 10, 10, 10, 10},
   {20, 0, 40, 0},
@@ -76,7 +76,7 @@ Railway purpleLine = Railway(
   {2, 6, 0, 0}
 );
 
-Railway pinkLine = Railway(
+Railway pinkLineCTA = Railway(
   {Checkpoint(41.853964, -87.705408), Checkpoint(41.854856, -87.6695341), Checkpoint(41.8849389, -87.6696133), Checkpoint(41.885840, -87.633990), Checkpoint(41.885921, -87.626137), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.885840, -87.633990)},
   {7, 7, 6, 10, 10, 10, 10},
   {14, 0, 40, 6},
@@ -90,11 +90,11 @@ std::vector<Railway> ctaRailways;
 
 constexpr size_t I2C_BUFFER_SIZE = 512;
 
-int slaveCountExpected = 5; //green adds 2, purple adds 0, every other line adds 1 (7 for full CTA without yellow line)
-int brownLineAdr = 0;
-int greenLineAdr[2] = {0, 0};
+std::vector<int> slaveCountExpected = {5}; //green adds 2, purple adds 0, every other line adds 1 (7 for full CTA without yellow line)
+int brownLineCTAAdr = 0;
+int greenLineCTAAdr[2] = {0, 0};
 
-std::vector<int> addressArr = std::vector<int>(slaveCountExpected, 0);
+std::vector<int> addressArr; //i2c addresses in numerical order
 std::vector<int> sequenceArr; //organizes i2c addresses from addressArr
 int slaveCount;
 
@@ -146,14 +146,14 @@ void setup() {
   request.hostname = "trek.thewcl.com";
   request.port = 80;
 
-  brownLine.setLoopIndex(2, 6);
-  orangeLine.setLoopIndex(3, 7);
-  purpleLine.setLoopIndex(2, 6);
-  pinkLine.setLoopIndex(3, 7);
-  ctaRailways = {brownLine, orangeLine, pinkLine, purpleLine, greenLine};
+  brownLineCTA.setLoopIndex(2, 6);
+  orangeLineCTA.setLoopIndex(3, 7);
+  purpleLineCTA.setLoopIndex(2, 6);
+  pinkLineCTA.setLoopIndex(3, 7);
+  ctaRailways = {brownLineCTA, orangeLineCTA, pinkLineCTA, purpleLineCTA, greenLineCTA};
   cities = {City(ctaRailways, "chicago")};
 
-  randomizeAddress();
+  //randomizeAddress();
   WiFi.clearCredentials();
 }
 
@@ -164,9 +164,9 @@ void loop(){
       Serial.printf("%i, ", i);
     }
     Serial.println();
-    Serial.println(brownLineAdr);
-    Serial.println(greenLineAdr[0]);
-    Serial.println(greenLineAdr[1]);
+    Serial.println(brownLineCTAAdr);
+    Serial.println(greenLineCTAAdr[0]);
+    Serial.println(greenLineCTAAdr[1]);
 
     for(int j = 0; j < cities[cityIndex].railways.size(); j++){
       delay(1000);
@@ -351,23 +351,23 @@ void loop(){
           
           if(inLoop){
             //adjusts output array orientation to match brown line
-            if(currentRailway.name == pinkLine.name){
+            if(currentRailway.name == pinkLineCTA.name){
               segmentPos = (float)currentRailway.outputs[2].size() - segmentPos;
-            }else if(currentRailway.name == orangeLine.name){
-              segmentPos = (int)(segmentPos + orangeLine.outputs[2].size() / 2) % orangeLine.outputs[2].size();
-            }else if(currentRailway.name == purpleLine.name){
+            }else if(currentRailway.name == orangeLineCTA.name){
+              segmentPos = (int)(segmentPos + orangeLineCTA.outputs[2].size() / 2) % orangeLineCTA.outputs[2].size();
+            }else if(currentRailway.name == purpleLineCTA.name){
               trainDir == 1;
             }
           }else{
-            if(currentRailway.name == brownLine.name || currentRailway.name == purpleLine.name){
+            if(currentRailway.name == brownLineCTA.name || currentRailway.name == purpleLineCTA.name){
               trainDir = 6 - trainDir;
             }
           }
-          if(pcbSegment == 1 && currentRailway.name == greenLine.name){
+          if(pcbSegment == 1 && currentRailway.name == greenLineCTA.name){
             segmentPos = (float)currentRailway.outputs[1].size() - segmentPos;
             trainDir = 6 - trainDir;
           }
-          if(pcbSegment == 3 && currentRailway.name == pinkLine.name){
+          if(pcbSegment == 3 && currentRailway.name == pinkLineCTA.name){
             trainDir = 6 - trainDir;
           }
           currentRailway.outputs[pcbSegment][(int)floor(segmentPos)] = trainDir;
@@ -379,13 +379,13 @@ void loop(){
       //outputs train data to slaves
       for(int i = 0; i < 4; i++){
         //sets color of data being sent
-        if(cityIndex == 0 && (i == 2 || currentRailway.name == purpleLine.name)){
-          Wire.beginTransmission(brownLineAdr);
+        if(cityIndex == 0 && (i == 2 || currentRailway.name == purpleLineCTA.name)){
+          Wire.beginTransmission(brownLineCTAAdr);
         }else if(cityIndex == 0 && i == 3){
-          if(currentRailway.name == orangeLine.name){
-            Wire.beginTransmission(greenLineAdr[0]);
+          if(currentRailway.name == orangeLineCTA.name){
+            Wire.beginTransmission(greenLineCTAAdr[0]);
           }else{
-            Wire.beginTransmission(greenLineAdr[1]);
+            Wire.beginTransmission(greenLineCTAAdr[1]);
           }
         }else{
           Wire.beginTransmission(sequenceArr[j * 2 + i]);
@@ -395,13 +395,13 @@ void loop(){
         Wire.write(String(currentRailway.colors[1].c_str()));
         Wire.endTransmission();
 
-        if(cityIndex == 0 && (i == 2 || currentRailway.name == purpleLine.name)){
-          Wire.beginTransmission(brownLineAdr);
+        if(cityIndex == 0 && (i == 2 || currentRailway.name == purpleLineCTA.name)){
+          Wire.beginTransmission(brownLineCTAAdr);
         }else if(cityIndex == 0 && i == 3){
-          if(currentRailway.name == orangeLine.name){
-            Wire.beginTransmission(greenLineAdr[0]);
+          if(currentRailway.name == orangeLineCTA.name){
+            Wire.beginTransmission(greenLineCTAAdr[0]);
           }else{
-            Wire.beginTransmission(greenLineAdr[1]);
+            Wire.beginTransmission(greenLineCTAAdr[1]);
           }
         }else{
           Wire.beginTransmission(sequenceArr[j * 2 + i]);
@@ -411,39 +411,39 @@ void loop(){
         if(cityIndex == 0){
           if(i == 2){
             //pads green line sending to loop
-            if(currentRailway.name == greenLine.name){
-              for(int j = 0; j < brownLine.outputs[0].size() + (brownLine.outputs[2].size() / 2); j++){
+            if(currentRailway.name == greenLineCTA.name){
+              for(int j = 0; j < brownLineCTA.outputs[0].size() + (brownLineCTA.outputs[2].size() / 2); j++){
                 Wire.write('0');
               }
             }
             //prevents brown/purple line from getting overriden
-            else if(currentRailway.name == brownLine.name || currentRailway.name == purpleLine.name){
-              for(int j = 0; j < brownLine.outputs[0].size(); j++){
+            else if(currentRailway.name == brownLineCTA.name || currentRailway.name == purpleLineCTA.name){
+              for(int j = 0; j < brownLineCTA.outputs[0].size(); j++){
                 Wire.write((char)currentRailway.outputs[0][j] + '0');
               }
             }
             //pads every other line sending to loop
             else{
-              for(int j = 0; j < brownLine.outputs[0].size(); j++){
+              for(int j = 0; j < brownLineCTA.outputs[0].size(); j++){
                 Wire.write('0');
               }
             }
           }
 
           //pads blank loop onto the brown/purple track
-          if(i == 1 && (currentRailway.name == brownLine.name || currentRailway.name == purpleLine.name)){
+          if(i == 1 && (currentRailway.name == brownLineCTA.name || currentRailway.name == purpleLineCTA.name)){
             for(int j = 0; j < currentRailway.outputs[2].size(); j++){
               Wire.write('0');
             }
           }
 
           //pad blank green segment onto orange and pink tracks
-          if(i == 3 && currentRailway.name == orangeLine.name){
-            for(int j = 0; j < greenLine.outputs[0].size() - orangeLine.outputs[3].size(); j++){
+          if(i == 3 && currentRailway.name == orangeLineCTA.name){
+            for(int j = 0; j < greenLineCTA.outputs[0].size() - orangeLineCTA.outputs[3].size(); j++){
               Wire.write('0');
             }
-          }else if(i == 3 && currentRailway.name == pinkLine.name){
-            for(int j = 0; j < greenLine.outputs[0].size() - pinkLine.outputs[3].size(); j++){
+          }else if(i == 3 && currentRailway.name == pinkLineCTA.name){
+            for(int j = 0; j < greenLineCTA.outputs[0].size() - pinkLineCTA.outputs[3].size(); j++){
               Wire.write('0');
             }
           }
@@ -472,7 +472,7 @@ void loop(){
 
 //clears up conflicts with multiple i2c slaves having the same address
 void randomizeAddress(){
-  while(slaveCount != slaveCountExpected){
+  while(slaveCount != slaveCountExpected[cityIndex]){
     slaveCount = 0;
     for(int i = 8; i <= 119; i++){
       Serial.println("\nrequest code 1, address: " + String(i));
@@ -565,6 +565,8 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
         break;
       }
       sequenceArr = std::vector<int>(cities[cityIndex].railways.size() * 2, 0);
+      addressArr = std::vector<int>(slaveCountExpected[cityIndex], 0);
+      randomizeAddress();
 
       //turn on led on first device
       Wire.beginTransmission(addressArr[0]);
@@ -577,12 +579,12 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
       int index = bleCount - 3;
       if(index < cities[cityIndex].railways.size()){
         if(cityIndex == 0 && (inputBuffer == "green1" || inputBuffer == "green2")){
-          nameBuffer = String(greenLine.name.c_str());
+          nameBuffer = String(greenLineCTA.name.c_str());
         }
 
         //finds which rail the address should be set to
         for(int i = 0; i < cities[cityIndex].railways.size(); i++){
-          if((cityIndex != 0 || nameBuffer != String(purpleLine.name.c_str())) && String(cities[cityIndex].railways[i].name.c_str()) == nameBuffer){
+          if((cityIndex != 0 || nameBuffer != String(purpleLineCTA.name.c_str())) && String(cities[cityIndex].railways[i].name.c_str()) == nameBuffer){
             railwayIndex = i;
           }
         }
@@ -593,17 +595,17 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
 
         //organizes address into sequenceArr
         for(int i = 0; i < 2; i++){
-          if(cities[cityIndex].railways[railwayIndex].outputs[i].size() == 0 || (cityIndex == 0 && cities[cityIndex].railways[railwayIndex].name == purpleLine.name)){
+          if(cities[cityIndex].railways[railwayIndex].outputs[i].size() == 0 || (cityIndex == 0 && cities[cityIndex].railways[railwayIndex].name == purpleLineCTA.name)){
             sequenceArr[2 * railwayIndex + i] = 0;
           }else{
             sequenceArr[2 * railwayIndex + i] = addressArr[index];
             if(cityIndex == 0){
-              if(inputBuffer == String(brownLine.name.c_str())){
-              brownLineAdr = sequenceArr[2 * railwayIndex + i];
+              if(inputBuffer == String(brownLineCTA.name.c_str())){
+              brownLineCTAAdr = sequenceArr[2 * railwayIndex + i];
               }else if(inputBuffer == "green1"){
-                greenLineAdr[0] = sequenceArr[2 * railwayIndex];
+                greenLineCTAAdr[0] = sequenceArr[2 * railwayIndex];
               }else if(inputBuffer == "green2"){
-                greenLineAdr[1] = sequenceArr[2 * railwayIndex + 1];
+                greenLineCTAAdr[1] = sequenceArr[2 * railwayIndex + 1];
               }
             }
           }
