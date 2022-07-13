@@ -99,9 +99,13 @@ int slaveCount;
 
 void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context);
 
-const BleUuid serviceUuid("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
-const BleUuid rxUuid("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
-const BleUuid txUuid("6E400003-B5A3-F393-E0A9-E50E24DCCA9E");
+// const BleUuid serviceUuid("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
+// const BleUuid rxUuid("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
+// const BleUuid txUuid("6E400003-B5A3-F393-E0A9-E50E24DCCA9E");
+
+const BleUuid serviceUuid("123A");
+const BleUuid rxUuid("123B");
+const BleUuid txUuid("123C");
 
 BleCharacteristic txCharacteristic("tx", BleCharacteristicProperty::NOTIFY, txUuid, serviceUuid);
 BleCharacteristic rxCharacteristic("rx", BleCharacteristicProperty::WRITE_WO_RSP, rxUuid, serviceUuid, onDataReceived, NULL);
@@ -536,6 +540,7 @@ void randomizeAddress(){
 int bleCount = 0;
 int railwayIndex = -1;
 void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context){
+  txCharacteristic.setValue("ok");
   String inputBuffer = "";
   String nameBuffer;
   for(int i = 0; i < len - 1; i++){
