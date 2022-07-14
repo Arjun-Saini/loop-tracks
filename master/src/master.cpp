@@ -21,6 +21,7 @@ brown line receives all loop data for cta
 no output segment can be 12 or 24 pixels long, causes conflict with slave protocol
 */
 
+//Chinatown to North/Clybourn
 Railway redLineCTA = Railway(
   //checkpoints in order starting at slave position, should be a checkpoint at each bend/turn, no 3 adjacent checkpoints can form an angle smaller than 90 degrees
   {Checkpoint(41.853028, -87.63109), Checkpoint(41.9041, -87.628921), Checkpoint(41.903888, -87.639506), Checkpoint(41.913732, -87.652380), Checkpoint(41.9253, -87.65286)},
@@ -31,6 +32,7 @@ Railway redLineCTA = Railway(
   {0, 0, 0, 0} //checkpoint bounds for lower loop, upper loop, lower green, upper green, these are only used for merging different rail colors onto one track
 );
 
+//Pulaski to Western (O'Hare branch)
 Railway blueLineCTA = Railway(
   {Checkpoint(41.873647, -87.727931), Checkpoint(41.875666, -87.672961), Checkpoint(41.875293, -87.640976), Checkpoint(41.875660, -87.627620), Checkpoint(41.885738, -87.629540), Checkpoint(41.885698, -87.639828), Checkpoint(41.915497, -87.686258)},
   {12, 8, 5, 5, 5, 25},
@@ -40,6 +42,7 @@ Railway blueLineCTA = Railway(
   {0, 0, 0, 0}
 );
 
+//Sedgewick to Loop
 Railway brownLineCTA = Railway(
   {Checkpoint(41.9107586, -87.648068), Checkpoint(41.9103656, -87.6373962), Checkpoint(41.885840, -87.633990), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.885921, -87.626137), Checkpoint(41.885840, -87.633990)},
   {5, 15, 10, 10, 10, 10},
@@ -49,6 +52,7 @@ Railway brownLineCTA = Railway(
   {2, 6, 0, 0}
 );
 
+//Cermak-McCormick to Kedzie
 Railway greenLineCTA = Railway(
   {Checkpoint(41.853115, -87.626402), Checkpoint(41.876946, -87.626046), Checkpoint(41.885921, -87.626137), Checkpoint(41.885724, -87.633945), Checkpoint(41.88422, -87.696234)},
   {15, 10, 10, 15},
@@ -58,6 +62,7 @@ Railway greenLineCTA = Railway(
   {1, 3, 0, 0}
 );
 
+//Halsted to Loop
 Railway orangeLineCTA = Railway(
   {Checkpoint(41.84678, -87.648088), Checkpoint(41.85817, -87.627117), Checkpoint(41.875689, -87.626019), Checkpoint(41.876955, -87.626044), Checkpoint(41.885921, -87.626137), Checkpoint(41.885840, -87.633990), Checkpoint(41.876835, -87.633710), Checkpoint(41.8767992, -87.6255196)},
   {12, 7, 1, 10, 10, 10, 10},
@@ -67,6 +72,7 @@ Railway orangeLineCTA = Railway(
   {3, 7, 1, 3}
 );
 
+//Sedgewick to Loop
 Railway purpleLineCTA = Railway(
   {Checkpoint(41.9107586, -87.648068), Checkpoint(41.9103656, -87.6373962), Checkpoint(41.885840, -87.633990), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.885921, -87.626137), Checkpoint(41.885840, -87.633990)},
   {5, 15, 10, 10, 10, 10},
@@ -76,6 +82,7 @@ Railway purpleLineCTA = Railway(
   {2, 6, 0, 0}
 );
 
+//Kedzie to Loop
 Railway pinkLineCTA = Railway(
   {Checkpoint(41.853964, -87.705408), Checkpoint(41.854856, -87.6695341), Checkpoint(41.8849389, -87.6696133), Checkpoint(41.885840, -87.633990), Checkpoint(41.885921, -87.626137), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.885840, -87.633990)},
   {7, 7, 6, 10, 10, 10, 10},
@@ -185,11 +192,10 @@ void setup(){
   Serial.begin(9600);
   delay(500);
 
+  //BLE setup
   BLE.on();
-
   BLE.addCharacteristic(txCharacteristic);
   BLE.addCharacteristic(rxCharacteristic);
-
   BleAdvertisingData data;
   data.appendServiceUUID(serviceUuid);
   BLE.advertise(&data);
@@ -207,13 +213,12 @@ void setup(){
   purpleLineCTA.setLoopIndex(2, 6);
   pinkLineCTA.setLoopIndex(3, 7);
   ctaRailways = {brownLineCTA, orangeLineCTA, pinkLineCTA, purpleLineCTA, greenLineCTA};
+
   //greenLine1 and greenLine2 must be in adjacent in the vector
   mbtaRailways = {redLineMBTA, greenLine1MBTA, greenLine2MBTA, blueLineMBTA, orangeLineMBTA};
-  
-  cities = {City(ctaRailways, "cta", 5), City(mbtaRailways, "mbta", 5)};
 
-  //randomizeAddress();
-  //WiFi.clearCredentials();
+  //1 slave per line, except cta green which has 2 and cta purple which has 0 (7 for full cta)
+  cities = {City(ctaRailways, "cta", 5), City(mbtaRailways, "mbta", 5)};
 }
 
 void loop(){
@@ -223,9 +228,6 @@ void loop(){
       Serial.printf("%i, ", i);
     }
     Serial.println();
-    // Serial.println(brownLineCTAAdr);
-    // Serial.println(greenLineCTAAdr[0]);
-    // Serial.println(greenLineCTAAdr[1]);
 
     cityIndexBuffer = cityIndex;
     for(int j = 0; j < cities[cityIndexBuffer].railways.size(); j++){
@@ -441,9 +443,9 @@ void loop(){
               trainDir = 6 - trainDir;
             }
           }
+
           currentRailway.outputs[pcbSegment][(int)floor(segmentPos)] = trainDir;
         }
-
         count++;
       }
 
@@ -673,15 +675,25 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
 
       //organizes address into sequenceArr
       for(int i = 0; i < 2; i++){
+        Serial.printlnf("address: %i", addressArr[bleCount]);
         if(cities[cityIndex].railways[railwayIndex].outputs[i].size() == 0 || (cityIndex == 0 && cities[cityIndex].railways[railwayIndex].name == purpleLineCTA.name)){
           sequenceArr[2 * railwayIndex + i] = 0;
         }else{
-          sequenceArr[2 * railwayIndex + i] = addressArr[bleCount];
+          if(cityIndex == 0 && nameBuffer == "green"){
+            if(inputBuffer == "green1"){
+              sequenceArr[2 * railwayIndex] = addressArr[bleCount];
+            }else if(inputBuffer == "green2"){
+              sequenceArr[2 * railwayIndex + 1] = addressArr[bleCount];
+            }
+          }else{
+            sequenceArr[2 * railwayIndex + i] = addressArr[bleCount];
+          }
           if(cityIndex == 0){
             if(inputBuffer == String(brownLineCTA.name.c_str())){
             brownLineCTAAdr = sequenceArr[2 * railwayIndex + i];
             }else if(inputBuffer == "green1"){
               greenLineCTAAdr[0] = sequenceArr[2 * railwayIndex];
+              //bleCount++;
             }else if(inputBuffer == "green2"){
               greenLineCTAAdr[1] = sequenceArr[2 * railwayIndex + 1];
             }

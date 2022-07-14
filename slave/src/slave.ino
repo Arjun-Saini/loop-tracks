@@ -81,7 +81,7 @@ void dataReceived(int count){
       blink = true;
     }else if(inputBuffer[0] == '4'){
       blink = false;
-      for(int i; i < strip.numPixels(); i++){
+      for(int i; i < MAX_PIXELS; i++){
         strip.setPixelColor(i, 0);
       }
     }

@@ -664,15 +664,25 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
 
       //organizes address into sequenceArr
       for(int i = 0; i < 2; i++){
+        Serial.printlnf("address: %i", addressArr[bleCount]);
         if(cities[cityIndex].railways[railwayIndex].outputs[i].size() == 0 || (cityIndex == 0 && cities[cityIndex].railways[railwayIndex].name == purpleLineCTA.name)){
           sequenceArr[2 * railwayIndex + i] = 0;
         }else{
-          sequenceArr[2 * railwayIndex + i] = addressArr[bleCount];
+          if(cityIndex == 0 && nameBuffer == "green"){
+            if(inputBuffer == "green1"){
+              sequenceArr[2 * railwayIndex] = addressArr[bleCount];
+            }else if(inputBuffer == "green2"){
+              sequenceArr[2 * railwayIndex + 1] = addressArr[bleCount];
+            }
+          }else{
+            sequenceArr[2 * railwayIndex + i] = addressArr[bleCount];
+          }
           if(cityIndex == 0){
             if(inputBuffer == String(brownLineCTA.name.c_str())){
             brownLineCTAAdr = sequenceArr[2 * railwayIndex + i];
             }else if(inputBuffer == "green1"){
               greenLineCTAAdr[0] = sequenceArr[2 * railwayIndex];
+              //bleCount++;
             }else if(inputBuffer == "green2"){
               greenLineCTAAdr[1] = sequenceArr[2 * railwayIndex + 1];
             }
