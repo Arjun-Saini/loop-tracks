@@ -229,10 +229,10 @@ void loop(){
 
     cityIndexBuffer = cityIndex;
     for(int j = 0; j < cities[cityIndexBuffer].railways.size(); j++){
+      delay(1000);
       if(cityIndex == -1){
         return;
       }
-      delay(1000);
       // request.path = "/api/1.0/ttpositions.aspx?key=00ff09063caa46748434d5fa321d048f&rt=" + String(railways[j].name.c_str()) + "&outputType=JSON";
       request.path = "/loop-tracks/" + String(cities[cityIndexBuffer].name.c_str()) + "?lines=" + String(cities[cityIndexBuffer].railways[j].name.c_str());
       http.get(request, response, headers);
@@ -420,7 +420,7 @@ void loop(){
               }else if(currentRailway.name == orangeLineCTA.name){
                 segmentPos = (int)(segmentPos + orangeLineCTA.outputs[2].size() / 2) % orangeLineCTA.outputs[2].size();
               }else if(currentRailway.name == purpleLineCTA.name){
-                trainDir == 1;
+                trainDir = 1;
               }
             }else{
               if(currentRailway.name == brownLineCTA.name || currentRailway.name == purpleLineCTA.name){
