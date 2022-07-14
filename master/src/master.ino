@@ -142,9 +142,9 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
 // const BleUuid rxUuid("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
 // const BleUuid txUuid("6E400003-B5A3-F393-E0A9-E50E24DCCA9E");
 
-const BleUuid serviceUuid("123A");
-const BleUuid rxUuid("123B");
-const BleUuid txUuid("123C");
+const BleUuid serviceUuid("a73ba101-8192-4a51-b42d-ae9cd14b14a5");
+const BleUuid rxUuid("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
+const BleUuid txUuid("6E400003-B5A3-F393-E0A9-E50E24DCCA9E");
 
 BleCharacteristic txCharacteristic("tx", BleCharacteristicProperty::NOTIFY, txUuid, serviceUuid);
 BleCharacteristic rxCharacteristic("rx", BleCharacteristicProperty::WRITE_WO_RSP, rxUuid, serviceUuid, onDataReceived, NULL);
