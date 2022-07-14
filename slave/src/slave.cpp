@@ -84,17 +84,18 @@ void dataReceived(int count){
   Serial.println("data received: ");
   Serial.print(inputBuffer);
   Serial.println();
-
-  if(size == 1 && inputBuffer[0] == '1'){
-    requestMode = 1;
-  }else if(size == 1 && inputBuffer[0] == '2'){
-    requestMode = 2;
-  }else if(size == 1 && inputBuffer[0] == '3'){
-    blink = true;
-  }else if(size == 1 && inputBuffer[0] == '4'){
-    blink = false;
-    for(int i; i < strip.numPixels(); i++){
-      strip.setPixelColor(i, 0);
+  if(size == 1){
+    if(inputBuffer[0] == '1'){
+      requestMode = 1;
+    }else if(inputBuffer[0] == '2'){
+      requestMode = 2;
+    }else if(inputBuffer[0] == '3'){
+      blink = true;
+    }else if(inputBuffer[0] == '4'){
+      blink = false;
+      for(int i; i < strip.numPixels(); i++){
+        strip.setPixelColor(i, 0);
+      }
     }
   }else if(size == 24){
     for(int i = 0; i < 24; i++){
