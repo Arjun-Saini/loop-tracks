@@ -85,6 +85,7 @@ Railway pinkLineCTA = Railway(
   {3, 7, 2, 3}
 );
 
+///JFK/UMass to Harvard
 Railway redLineMBTA = Railway{
   {Checkpoint(42.320414, -71.052139), Checkpoint(42.327649, -71.057760), Checkpoint(42.344627, -71.056986), Checkpoint(42.350559, -71.052613), Checkpoint(42.360982, -71.070116), Checkpoint(42.363490, -71.100487), Checkpoint(42.372535, -71.115947)},
   {5, 10, 5, 10, 10, 10},
@@ -94,28 +95,41 @@ Railway redLineMBTA = Railway{
   {0, 0, 0, 0},
 };
 
+//Wood Island to Bowdoin
 Railway blueLineMBTA = Railway{
-  {Checkpoint(42.379558, -71.022962), Checkpoint(42.359979, -71.047712), },
-  {5, 10, 5, 10, 10, 10},
-  {0, 50, 0, 0},
+  {Checkpoint(42.379551, -71.023236), Checkpoint(42.360008, -71.047623), Checkpoint(42.359257, -71.059615), Checkpoint(42.361149, -71.062128)},
+  {20, 10, 10},
+  {0, 40, 0, 0},
   "blue",
   {"0000FF", "00000A"},
   {0, 0, 0, 0},
 };
 
+//Roxbury Crossing to Wellington
 Railway orangeLineMBTA = Railway{
-  {},
-  {5, 10, 5, 10, 10, 10},
-  {0, 50, 0, 0},
+  {Checkpoint(42.331520, -71.095285), Checkpoint(42.347474, -71.076055), Checkpoint(42.346967, -71.064553), Checkpoint(42.357606, -71.057324), Checkpoint(42.377410, -71.075941), Checkpoint(42.403125, -71.077024)},
+  {10, 5, 10, 10, 10},
+  {0, 45, 0, 0},
   "orange",
   {"FF8000", "0A0500"},
   {0, 0, 0, 0},
 };
 
-Railway greenLineMBTA = Railway{
-  {},
-  {5, 10, 5, 10, 10, 10},
-  {0, 50, 0, 0},
+//Kenmore to Union Square
+Railway greenLine1MBTA = Railway{
+  {Checkpoint(42.348957, -71.095080), Checkpoint(42.349616, -71.079112), Checkpoint(42.351835, -71.070836), Checkpoint(42.352342, -71.064498), Checkpoint(42.362111, -71.057983), Checkpoint(42.366666, -71.061263), Checkpoint(42.365633, -71.064124), Checkpoint(42.377506, -71.095170)},
+  {5, 5, 5, 5, 5, 5, 5},
+  {0, 35, 0, 0},
+  "green",
+  {"00FF00", "000A00"},
+  {0, 0, 0, 0},
+};
+
+//Longwood Medical Center to Back Bay(merges with green1)
+Railway greenLine2MBTA = Railway{
+  {Checkpoint(42.335878, -71.100229), Checkpoint(42.349616, -71.079112)},
+  {15},
+  {0, 15, 0, 0},
   "green",
   {"00FF00", "000A00"},
   {0, 0, 0, 0},
@@ -192,9 +206,10 @@ void setup(){
   purpleLineCTA.setLoopIndex(2, 6);
   pinkLineCTA.setLoopIndex(3, 7);
   ctaRailways = {brownLineCTA, orangeLineCTA, pinkLineCTA, purpleLineCTA, greenLineCTA};
-  mbtaRailways = {redLineMBTA};
+  //greenLine1 and greenLine2 must be in adjacent in the vector
+  mbtaRailways = {redLineMBTA, greenLine1MBTA, greenLine2MBTA, blueLineMBTA, orangeLineMBTA};
   
-  cities = {City(ctaRailways, "cta", 5), City(mbtaRailways, "mbta", 1)};
+  cities = {City(ctaRailways, "cta", 5), City(mbtaRailways, "mbta", 5)};
 
   //randomizeAddress();
   WiFi.clearCredentials();
@@ -626,8 +641,8 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
     nameBuffer = inputBuffer;
     Serial.println(inputBuffer);
     if(bleCount < cities[cityIndex].railways.size()){
-      if(cityIndex == 0 && (inputBuffer == "green1" || inputBuffer == "green2")){
-        nameBuffer = String(greenLineCTA.name.c_str());
+      if((cityIndex == 0 || cityIndex == 1) && (inputBuffer == "green1" || inputBuffer == "green2")){
+        nameBuffer = "green";
         Serial.println("green fix");
       }
 
@@ -635,6 +650,9 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
       for(int i = 0; i < cities[cityIndex].railways.size(); i++){
         if((cityIndex != 0 || nameBuffer != String(purpleLineCTA.name.c_str())) && String(cities[cityIndex].railways[i].name.c_str()) == nameBuffer){
           railwayIndex = i;
+        }
+        if(cityIndex == 1 && inputBuffer == "green2"){
+          railwayIndex++;
         }
       }
       if(railwayIndex == -1){
@@ -676,6 +694,14 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
       WiFi.connect();
     }
     bleCount++;
+  }else if(inputBuffer.indexOf("reset") == 0){
+    Serial.println("reset");
+    Wire.beginTransmission(addressArr[bleCount]);
+    Wire.write('4');
+    Wire.endTransmission();
+    bleCount = 0;
+    cityIndex = -1;
+    railwayIndex = -1;
   }
 }
 
