@@ -519,8 +519,8 @@ void loop() {
    b42c2:	4c0d      	ldr	r4, [pc, #52]	; (b42f8 <loop+0x38>)
    b42c4:	7823      	ldrb	r3, [r4, #0]
    b42c6:	b193      	cbz	r3, b42ee <loop+0x2e>
-    rainbow(10);
-   b42c8:	200a      	movs	r0, #10
+    rainbow(5);
+   b42c8:	2005      	movs	r0, #5
    b42ca:	f7ff ffbf 	bl	b424c <_Z7rainbowh>
     if(!blink){
    b42ce:	7824      	ldrb	r4, [r4, #0]

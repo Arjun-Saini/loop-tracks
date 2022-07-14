@@ -52,7 +52,7 @@ void loop() {
     // delay(500);
     // digitalWrite(D7, LOW);
     // delay(500);
-    rainbow(10);
+    rainbow(5);
     if(!blink){
       for(int i = 0; i < MAX_PIXELS; i++){
         strip.setPixelColor(i, 0);
