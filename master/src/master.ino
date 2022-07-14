@@ -107,8 +107,8 @@ Railway orangeLineMBTA = Railway{
 //Kenmore to Union Square
 Railway greenLine1MBTA = Railway{
   {Checkpoint(42.348957, -71.095080), Checkpoint(42.349616, -71.079112), Checkpoint(42.351835, -71.070836), Checkpoint(42.352342, -71.064498), Checkpoint(42.362111, -71.057983), Checkpoint(42.366666, -71.061263), Checkpoint(42.365633, -71.064124), Checkpoint(42.377506, -71.095170)},
-  {5, 5, 5, 5, 5, 5, 5},
-  {0, 35, 0, 0},
+  {10, 10, 10, 10, 10, 10, 10},
+  {0, 70, 0, 0},
   "green",
   {"00FF00", "000A00"},
   {0, 0, 0, 0},
@@ -426,7 +426,7 @@ void loop(){
           }
           //mbta direction fixes
           else if(cityIndexBuffer == 1){
-            if(currentRailway.name == orangeLineMBTA.name){
+            if(currentRailway.name == orangeLineMBTA.name || currentRailway.name == greenLine1MBTA.name || currentRailway.name == redLineMBTA.name){
               trainDir = 6 - trainDir;
             }
           }
@@ -689,12 +689,12 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
     }
     if(bleCount == cities[cityIndex].railways.size() - 1){
       Serial.println("BLE finished");
-      for(int i = 0; i < addressArr.size(); i++){
-        Serial.printlnf("turning off: %i", i);
-        Wire.beginTransmission(addressArr[i]);
-        Wire.write('4');
-        Wire.endTransmission();
-      }
+      // for(int i = 0; i < addressArr.size(); i++){
+      //   Serial.printlnf("turning off: %i", i);
+      //   Wire.beginTransmission(addressArr[i]);
+      //   Wire.write('4');
+      //   Wire.endTransmission();
+      // }
       userInput = true;
       WiFi.on();
       WiFi.connect();
