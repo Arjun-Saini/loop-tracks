@@ -19,7 +19,7 @@ SYSTEM_MODE(MANUAL)
 
 int address;
 int requestMode = 0;
-bool verifyAddress = false;
+bool verifyAddress = true;
 String deviceID = System.deviceID();
 bool blink = false;
 Adafruit_NeoPixel strip(MAX_PIXELS, D2, 0x02);
@@ -32,9 +32,11 @@ void rainbow(uint8_t wait);
 uint32_t Wheel(byte WheelPos);
 
 void setup() {
+  randomSeed(millis());
   WiFi.off();
   Serial.begin(9600);
-  address = random(8, 120);
+  //address = random(8, 64);
+  address = 10;
   acquireWireBuffer();
   Wire.begin(address);
   Wire.onReceive(dataReceived);
@@ -58,8 +60,17 @@ void loop() {
         strip.setPixelColor(i, 0);
       }
     }
-  }else{
-    delay(100);
+  }
+  if(!verifyAddress){
+    Serial.printf("randomize address %d, ", address);
+    address = random(64, 120);
+    Serial.println(address);
+    Wire.end();
+    Wire.begin(address);
+    Wire.onReceive(dataReceived);
+    Wire.onRequest(dataRequest);
+    requestMode = 0;
+    verifyAddress = true;
   }
   strip.show();
 }
@@ -93,28 +104,18 @@ void dataReceived(int count){
       blink = true;
     }else if(inputBuffer[0] == '4'){
       blink = false;
-      for(int i; i < MAX_PIXELS; i++){
+      for(int i = 0; i < MAX_PIXELS; i++){
         strip.setPixelColor(i, 0);
       }
     }
   }else if(size == 24){
+    Serial.println("size 24");
     for(int i = 0; i < 24; i++){
+      Serial.printlnf("deviceID char: %c, inputBuffer char: %c", deviceID.charAt(i), inputBuffer[i]);
       if(deviceID.charAt(i) != inputBuffer[i]){
         verifyAddress = false;
         break;
       }
-      verifyAddress = true;
-    }
-    if(verifyAddress){
-      Serial.println("correct address");
-    }else{
-      Serial.println("randomize address");
-      address = random(64, 120);
-      Wire.end();
-      Wire.begin(address);
-      Wire.onReceive(dataReceived);
-      Wire.onRequest(dataRequest);
-      requestMode = 0;
     }
   }else if(size == 12){
     std::string headBuffer = "";
@@ -159,7 +160,6 @@ void dataRequest(){
       Serial.println("request mode 2");
       if(verifyAddress){
         Wire.write("pass");
-        verifyAddress = false;
       }else{
         Wire.write("fail");
       }

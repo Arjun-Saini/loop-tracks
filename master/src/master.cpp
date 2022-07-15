@@ -545,7 +545,8 @@ void loop(){
 
 //clears up conflicts with multiple i2c slaves having the same address
 void randomizeAddress(){
-  while(slaveCount != cities[cityIndex].slaveCountExpected){
+  while(slaveCount < cities[cityIndex].slaveCountExpected){
+    Serial.printlnf("slaveCount: %i", slaveCount);
     slaveCount = 0;
     for(int i = 8; i <= 119; i++){
       Serial.println("\nrequest code 1, address: " + String(i));
@@ -557,8 +558,6 @@ void randomizeAddress(){
       Wire.requestFrom(i, 24);
       if(Wire.available() > 0){
         Serial.println("transmission recieved from: " + String(i));
-
-        slaveCount++;
 
         String inputBuffer = "";
         char c;
@@ -584,6 +583,10 @@ void randomizeAddress(){
         }
         
         Serial.println("conflict verification: " + inputBuffer);
+        if(inputBuffer != "pass"){
+          break;
+        }
+        slaveCount++;
       }
     }
   }
