@@ -3,6 +3,7 @@ SYSTEM_MODE(MANUAL)
 #include "HttpClient.h"
 #include "JsonParserGeneratorRK.h"
 #include "City.cpp"
+#include "Adafruit_VL6180X.h"
 
 /*
 all loop segment sizes must be the same
@@ -156,6 +157,8 @@ const BleUuid txUuid("6E400003-B5A3-F393-E0A9-E50E24DCCA9E");
 BleCharacteristic txCharacteristic("tx", BleCharacteristicProperty::NOTIFY, txUuid, serviceUuid);
 BleCharacteristic rxCharacteristic("rx", BleCharacteristicProperty::WRITE_WO_RSP, rxUuid, serviceUuid, onDataReceived, NULL);
 
+Adafruit_VL6180X vl = Adafruit_VL6180X();
+
 http_header_t headers[] = {
   {"Accept", "/*/"},
   {NULL, NULL}
@@ -191,6 +194,7 @@ void setup(){
 
   acquireWireBuffer();
   Wire.begin();
+  vl.begin();
 
   // request.hostname = "lapi.transitchicago.com";
   // request.port = 80;
@@ -220,6 +224,22 @@ void loop(){
 
     cityIndexBuffer = cityIndex;
     for(int j = 0; j < cities[cityIndexBuffer].railways.size(); j++){
+      //rainbow led on when close proximity
+      uint8_t range = vl.readRange();
+      if (range <= 100) {
+        Serial.println("light show");
+        for(int i = 0; i < addressArr.size(); i++){
+          Wire.beginTransmission(addressArr[i]);
+          Wire.write('3');
+          Wire.endTransmission();
+        }
+        delay(3000);
+        for(int i = 0; i < addressArr.size(); i++){
+          Wire.beginTransmission(addressArr[i]);
+          Wire.write('4');
+          Wire.endTransmission();
+        }
+      }
       delay(1000);
       if(cityIndex == -1){
         return;
@@ -538,6 +558,9 @@ void randomizeAddress(){
     Serial.printlnf("slaveCount: %i", slaveCount);
     slaveCount = 0;
     for(int i = 8; i <= 119; i++){
+      if(i == 41){
+        continue;
+      }
       Serial.println("\nrequest code 1, address: " + String(i));
       Wire.beginTransmission(i);
       Wire.write('1');

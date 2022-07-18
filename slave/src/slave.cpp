@@ -35,8 +35,10 @@ void setup() {
   randomSeed(millis());
   WiFi.off();
   Serial.begin(9600);
-  //address = random(8, 64);
-  address = 10;
+  address = random(8, 64);
+  while(address == 41){
+    address = random(8, 64);
+  }
   acquireWireBuffer();
   Wire.begin(address);
   Wire.onReceive(dataReceived);
