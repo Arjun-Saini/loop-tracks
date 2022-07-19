@@ -1,0 +1,7 @@
+{
+    "sketch": "slave_arduino.ino",
+    "output": "build",
+    "board": "arduino:avr:uno",
+    "programmer": "arduino:avrisp",
+    "port": "/dev/tty.usbserial-14430"
+}

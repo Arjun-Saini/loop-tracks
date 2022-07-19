@@ -14,6 +14,8 @@ SYSTEM_MODE(MANUAL)
 #include "HttpClient.h"
 #include "JsonParserGeneratorRK.h"
 #include "City.cpp"
+#include "Adafruit_VL6180X.h"
+#include "MQTT.h"
 
 /*
 all loop segment sizes must be the same
@@ -155,6 +157,8 @@ std::vector<int> sequenceArr; //organizes i2c addresses from addressArr
 int slaveCount;
 
 void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context);
+void lightshow(int length);
+void callback(char* topic, byte* payload, unsigned int length);
 
 // const BleUuid serviceUuid("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
 // const BleUuid rxUuid("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
@@ -166,6 +170,10 @@ const BleUuid txUuid("6E400003-B5A3-F393-E0A9-E50E24DCCA9E");
 
 BleCharacteristic txCharacteristic("tx", BleCharacteristicProperty::NOTIFY, txUuid, serviceUuid);
 BleCharacteristic rxCharacteristic("rx", BleCharacteristicProperty::WRITE_WO_RSP, rxUuid, serviceUuid, onDataReceived, NULL);
+
+Adafruit_VL6180X vl = Adafruit_VL6180X();
+
+MQTT client("lab.thewcl.com", 1883, callback);
 
 http_header_t headers[] = {
   {"Accept", "/*/"},
@@ -202,6 +210,7 @@ void setup(){
 
   acquireWireBuffer();
   Wire.begin();
+  vl.begin();
 
   // request.hostname = "lapi.transitchicago.com";
   // request.port = 80;
@@ -224,6 +233,16 @@ void setup(){
 void loop(){
   if(WiFi.hasCredentials() && userInput){
     Serial.println("loop start");
+
+    //MQTT
+    if(client.isConnected()){
+      client.subscribe("loop-tracks/twitter");
+      client.loop();
+      Serial.println("mqtt loop");
+    }else{
+      client.connect("sparkclient");
+    }
+
     for(int i : sequenceArr){
       Serial.printf("%i, ", i);
     }
@@ -231,6 +250,14 @@ void loop(){
 
     cityIndexBuffer = cityIndex;
     for(int j = 0; j < cities[cityIndexBuffer].railways.size(); j++){
+      //rainbow led on when close proximity
+      Wire.lock();
+      uint8_t range = vl.readRange();
+      Wire.unlock();
+      if (range <= 100) {
+        Serial.println("proximity");
+        lightshow(1000);
+      }
       delay(1000);
       if(cityIndex == -1){
         return;
@@ -449,6 +476,7 @@ void loop(){
         count++;
       }
 
+      Wire.lock();
       //outputs train data to slaves
       for(int i = 0; i < 4; i++){
         //sets color of data being sent
@@ -532,6 +560,7 @@ void loop(){
         Serial.println();
         Wire.endTransmission();
       }
+      Wire.unlock();
       for(int i = 0; i < 4; i++){
         for(int j = 0; j < currentRailway.outputs[i].size(); j++){
           currentRailway.outputs[i][j] = 0;
@@ -545,10 +574,14 @@ void loop(){
 
 //clears up conflicts with multiple i2c slaves having the same address
 void randomizeAddress(){
+  Wire.lock();
   while(slaveCount < cities[cityIndex].slaveCountExpected){
     Serial.printlnf("slaveCount: %i", slaveCount);
     slaveCount = 0;
     for(int i = 8; i <= 119; i++){
+      if(i == 41){
+        continue;
+      }
       Serial.println("\nrequest code 1, address: " + String(i));
       Wire.beginTransmission(i);
       Wire.write('1');
@@ -607,9 +640,11 @@ void randomizeAddress(){
       addressArr[count++] = i;
     }
   }
+  Wire.unlock();
 }
 
 void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context){
+  Wire.lock();
   txCharacteristic.setValue("ok");
   String inputBuffer = "";
   String nameBuffer;
@@ -724,6 +759,7 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
       userInput = true;
       WiFi.on();
       WiFi.connect();
+      client.connect("sparkclient");
     }
     bleCount++;
   }else if(inputBuffer.indexOf("reset") == 0){
@@ -739,6 +775,7 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
     userInput = false;
     Serial.println("reset done");
   }
+  Wire.unlock();
 }
 
 hal_i2c_config_t acquireWireBuffer() {
@@ -751,4 +788,25 @@ hal_i2c_config_t acquireWireBuffer() {
         .tx_buffer_size = I2C_BUFFER_SIZE
     };
     return config;
+}
+
+void lightshow(int length){
+  Wire.lock();
+  for(int i = 0; i < addressArr.size(); i++){
+    Wire.beginTransmission(addressArr[i]);
+    Wire.write('3');
+    Wire.endTransmission();
+  }
+  delay(length);
+  for(int i = 0; i < addressArr.size(); i++){
+    Wire.beginTransmission(addressArr[i]);
+    Wire.write('4');
+    Wire.endTransmission();
+  }
+  Wire.unlock();
+}
+
+void callback(char* topic, byte* payload, unsigned int length){
+  Serial.println("twitter");
+  lightshow(3000);
 }
