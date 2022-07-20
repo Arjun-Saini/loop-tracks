@@ -198,27 +198,27 @@ void setup()
     data.appendServiceUUID(serviceUuid);
     BLE.advertise(&data);
 
-  acquireWireBuffer();
-  Wire.setClock(400000);
-  Wire.begin();
-  vl.begin();
+    acquireWireBuffer();
+    Wire.setClock(400000);
+    Wire.begin();  
+    vl.begin();
 
     // request.hostname = "lapi.transitchicago.com";
     // request.port = 80;
     request.hostname = "trek.thewcl.com";
     request.port = 80;
 
-  brownLineCTA.setLoopIndex(2, 6);
-  orangeLineCTA.setLoopIndex(3, 7);
-  purpleLineCTA.setLoopIndex(2, 6);
-  pinkLineCTA.setLoopIndex(3, 7);
-  ctaRailways = {brownLineCTA, purpleLineCTA, greenLineCTA};
+    brownLineCTA.setLoopIndex(2, 6);
+    orangeLineCTA.setLoopIndex(3, 7);
+    purpleLineCTA.setLoopIndex(2, 6);
+    pinkLineCTA.setLoopIndex(3, 7);
+    ctaRailways = {redLineCTA};
 
     // greenLine1 and greenLine2 must be in adjacent in the vector
     mbtaRailways = {redLineMBTA, greenLine1MBTA, greenLine2MBTA, blueLineMBTA, orangeLineMBTA};
 
-  //1 slave per line, except cta green which has 2 and cta purple which has 0 (7 for full cta)
-  cities = {City(ctaRailways, "cta", 3), City(mbtaRailways, "mbta", 5)};
+    //1 slave per line, except cta green which has 2 and cta purple which has 0 (7 for full cta)
+    cities = {City(ctaRailways, "cta", 1), City(mbtaRailways, "mbta", 5)};
 }
 
 void loop()
@@ -253,7 +253,7 @@ void loop()
             if (range <= 100)
             {
                 Serial.println("proximity");
-                lightshow(1000);
+                //lightshow(1000);
             }
             delay(1000);
             if (cityIndex == -1)
@@ -743,6 +743,10 @@ void randomizeAddress()
     int count = 0;
     for (int i = 8; i <= 119; i++)
     {
+        if(i == 41)
+        {
+            continue;
+        }
         Wire.beginTransmission(i);
         Wire.write('1');
         Wire.endTransmission();
@@ -958,5 +962,5 @@ void lightshow(int length)
 void callback(char *topic, byte *payload, unsigned int length)
 {
     Serial.println("twitter");
-    lightshow(3000);
+    //lightshow(3000);
 }
