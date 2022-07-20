@@ -9,8 +9,4 @@ void setup()
 
 void loop()
 {
-    Serial.println("Initializing...");
-    Serial.println(x2u("abcdef"), HEX);
-    Serial.println("Done.");
-    delay(1000);
 }
