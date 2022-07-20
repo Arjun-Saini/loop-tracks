@@ -223,13 +223,13 @@ void setup()
     orangeLineCTA.setLoopIndex(3, 7);
     purpleLineCTA.setLoopIndex(2, 6);
     pinkLineCTA.setLoopIndex(3, 7);
-    ctaRailways = {redLineCTA};
+    ctaRailways = {brownLineCTA, orangeLineCTA, pinkLineCTA};
 
     // greenLine1 and greenLine2 must be in adjacent in the vector
     mbtaRailways = {redLineMBTA, greenLine1MBTA, greenLine2MBTA, blueLineMBTA, orangeLineMBTA};
 
     //1 slave per line, except cta green which has 2 and cta purple which has 0 (7 for full cta)
-    cities = {City(ctaRailways, "cta", 1), City(mbtaRailways, "mbta", 5)};
+    cities = {City(ctaRailways, "cta", 3), City(mbtaRailways, "mbta", 5)};
 }
 
 void loop()
@@ -237,18 +237,6 @@ void loop()
     if (WiFi.hasCredentials() && userInput)
     {
         Serial.println("loop start");
-
-        // MQTT
-        if (client.isConnected())
-        {
-            client.subscribe("loop-tracks/twitter");
-            client.loop();
-            Serial.println("mqtt loop");
-        }
-        else
-        {
-            client.connect("sparkclient");
-        }
 
         for (int i : sequenceArr)
         {
@@ -264,8 +252,21 @@ void loop()
             if (range <= 100)
             {
                 Serial.println("proximity");
-                //lightshow(1000);
+                lightshow(1000);
             }
+
+            // MQTT
+            if (client.isConnected())
+            {
+                client.subscribe("loop-tracks/twitter");
+                client.loop();
+                Serial.println("mqtt loop");
+            }
+            else
+            {
+                client.connect("sparkclient");
+            }
+
             delay(1000);
             if (cityIndex == -1)
             {
@@ -973,5 +974,5 @@ void lightshow(int length)
 void callback(char *topic, byte *payload, unsigned int length)
 {
     Serial.println("twitter");
-    //lightshow(3000);
+    lightshow(3000);
 }
