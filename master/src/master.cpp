@@ -253,6 +253,7 @@ void loop()
             {
                 Serial.println("proximity");
                 lightshow(1000);
+                return;
             }
 
             // MQTT
