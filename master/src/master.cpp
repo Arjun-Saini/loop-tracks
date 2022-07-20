@@ -156,7 +156,7 @@ std::vector<int> addressArr;  // i2c addresses in numerical order
 std::vector<int> sequenceArr; // organizes i2c addresses from addressArr
 int slaveCount;
 
-bool parseTrain(int count, Railway &currentRailway, std::vector<Checkpoint> &currentCheckpoints);
+bool parseTrain(int trainIndex, Railway &currentRailway);
 void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, void *context);
 void lightshow(int length);
 void callback(char *topic, byte *payload, unsigned int length);
@@ -269,6 +269,7 @@ void loop()
             }
 
             delay(1000);
+
             if (cityIndex == -1)
             {
                 return;
@@ -286,18 +287,17 @@ void loop()
                 return;
             }
 
-            int count = 0;
+            int trainIndex = 0;
             Railway currentRailway = cities[cityIndexBuffer].railways[j];
-            std::vector<Checkpoint> currentCheckpoints = currentRailway.checkpoints;
 
             // loop through each train, loop breaks when all trains have been parsed
             while (true)
             {
-                if (parseTrain(count, currentRailway, currentCheckpoints))
+                if (parseTrain(trainIndex, currentRailway))
                 {
                     break;
                 }
-                count++;
+                trainIndex++;
             }
 
             // outputs train data to slaves
@@ -430,15 +430,14 @@ void loop()
 }
 /**
  * Parses a train from the HTTP API and stores it in the railways array.
- * @param count The index of the railway in the railways array.
+ * @param trainIndex The index of current train in the railway.
  * @param currentRailway the current railway we are on.
- * @param currentCheckpoints the current checkpoints of the railway
  * @return true if there are no more trains to parse, false otherwise.
  */
-bool parseTrain(int count, Railway &currentRailway, std::vector<Checkpoint> &currentCheckpoints)
+bool parseTrain(int trainIndex, Railway &currentRailway)
 {
     // parse json data returned from api
-    JsonReference train = parser.getReference().key("lines").index(0).key("trains").index(count);
+    JsonReference train = parser.getReference().key("lines").index(0).key("trains").index(trainIndex);
     String nextStation = train.key("next_stop").valueString();
     String destNm = train.key("destination").valueString();
     int trainDir = train.key("direction").valueInt();
@@ -454,6 +453,7 @@ bool parseTrain(int count, Railway &currentRailway, std::vector<Checkpoint> &cur
     // Serial.print(String(currentRailway.name.c_str()) + " ");
     // Serial.printf("train %i: ", count);
 
+    std::vector<Checkpoint> currentCheckpoints = currentRailway.checkpoints;
     int checkpointCount = currentCheckpoints.size();
 
     // finds index of closest checkpoint to train

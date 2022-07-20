@@ -9,7 +9,7 @@ SYSTEM_MODE(MANUAL)
 /*
 all loop segment sizes must be the same
 brown line receives all loop data for cta
-no output segment can be 12 or 24 pixels long, causes conflict with slave protocol
+no output segment can be 1, 12, or 24 pixels long, causes conflict with slave protocol
 */
 
 // Chinatown to North/Clybourn
@@ -145,7 +145,7 @@ std::vector<int> addressArr;  // i2c addresses in numerical order
 std::vector<int> sequenceArr; // organizes i2c addresses from addressArr
 int slaveCount;
 
-bool parseTrain(int count, Railway &currentRailway, std::vector<Checkpoint> &currentCheckpoints);
+bool parseTrain(int trainIndex, Railway &currentRailway);
 void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, void *context);
 void lightshow(int length);
 void callback(char *topic, byte *payload, unsigned int length);
@@ -258,6 +258,7 @@ void loop()
             }
 
             delay(1000);
+
             if (cityIndex == -1)
             {
                 return;
@@ -275,18 +276,17 @@ void loop()
                 return;
             }
 
-            int count = 0;
+            int trainIndex = 0;
             Railway currentRailway = cities[cityIndexBuffer].railways[j];
-            std::vector<Checkpoint> currentCheckpoints = currentRailway.checkpoints;
 
             // loop through each train, loop breaks when all trains have been parsed
             while (true)
             {
-                if (parseTrain(count, currentRailway, currentCheckpoints))
+                if (parseTrain(trainIndex, currentRailway))
                 {
                     break;
                 }
-                count++;
+                trainIndex++;
             }
 
             // outputs train data to slaves
@@ -419,15 +419,14 @@ void loop()
 }
 /**
  * Parses a train from the HTTP API and stores it in the railways array.
- * @param count The index of the railway in the railways array.
- * @param currentRailway the current railway we are on.
- * @param currentCheckpoints the current checkpoints of the railway
+ * @param trainIndex The index of train in the railway.
+ * @param currentRailway The current railway we are on.
  * @return true if there are no more trains to parse, false otherwise.
  */
-bool parseTrain(int count, Railway &currentRailway, std::vector<Checkpoint> &currentCheckpoints)
+bool parseTrain(int trainIndex, Railway &currentRailway)
 {
     // parse json data returned from api
-    JsonReference train = parser.getReference().key("lines").index(0).key("trains").index(count);
+    JsonReference train = parser.getReference().key("lines").index(0).key("trains").index(trainIndex);
     String nextStation = train.key("next_stop").valueString();
     String destNm = train.key("destination").valueString();
     int trainDir = train.key("direction").valueInt();
@@ -443,6 +442,7 @@ bool parseTrain(int count, Railway &currentRailway, std::vector<Checkpoint> &cur
     // Serial.print(String(currentRailway.name.c_str()) + " ");
     // Serial.printf("train %i: ", count);
 
+    std::vector<Checkpoint> currentCheckpoints = currentRailway.checkpoints;
     int checkpointCount = currentCheckpoints.size();
 
     // finds index of closest checkpoint to train
@@ -681,7 +681,7 @@ bool parseTrain(int count, Railway &currentRailway, std::vector<Checkpoint> &cur
     return false;
 }
 
-// clears up conflicts with multiple i2c slaves having the same address
+// Clears up conflicts with multiple i2c slaves having the same address.
 void randomizeAddress()
 {
     while (slaveCount < cities[cityIndex].slaveCountExpected)
@@ -764,6 +764,7 @@ void randomizeAddress()
     }
 }
 
+// Communication with app, configures city and rail colors.
 void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, void *context)
 {
     txCharacteristic.setValue("ok");
@@ -932,6 +933,7 @@ void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, 
     }
 }
 
+// Increases I2C buffer size
 hal_i2c_config_t acquireWireBuffer()
 {
     hal_i2c_config_t config = {
@@ -944,6 +946,10 @@ hal_i2c_config_t acquireWireBuffer()
     return config;
 }
 
+/**
+ * @brief Sends rainbow command to every slave.
+ * @param length Duration in ms for rainbow to last.
+ */
 void lightshow(int length)
 {
     for (int i = 0; i < addressArr.size(); i++)
@@ -961,6 +967,7 @@ void lightshow(int length)
     }
 }
 
+// MQTT callback for twitter response
 void callback(char *topic, byte *payload, unsigned int length)
 {
     Serial.println("twitter");
