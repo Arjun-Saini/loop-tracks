@@ -15,8 +15,7 @@ bool verifyAddress = true;
 String deviceID = "";
 
 bool blink = false;
-Adafruit_NeoPixel strip(100, 2, 0x02);
-//constexpr size_t I2C_BUFFER_SIZE = 512;
+Adafruit_NeoPixel strip(100, 2, ((1 << 6) | (1 << 4) | (0 << 2) | (2)) /*|< Transmit as G,R,B*/ + 0x0000 /*|< 800 KHz data transmission*/);
 
 uint32_t headColor;
 uint32_t tailColor;
@@ -27,15 +26,18 @@ uint32_t Wheel(byte WheelPos);
 void setup() {
     Serial.begin(115200);
     for(size_t i = 0; i < 9; i++){
-        deviceID += (_UniqueID.id + 9 - 9)[i];
+      deviceID += (_UniqueID.id + 9 - 9)[i];
     }
-    deviceID += "000000";
-  randomSeed(millis());
+    while(deviceID.length() < 24){
+      deviceID += "0";
+    }
+  randomSeed((unsigned long)(_UniqueID.id + 9 - 9));
   address = random(8, 64);
   while(address == 41){
     address = random(8, 64);
   }
   //acquireWireBuffer();
+  Wire.setClock(400000);
   Wire.begin(address);
   Wire.onReceive(dataReceived);
   Wire.onRequest(dataRequest);
@@ -46,20 +48,12 @@ void setup() {
 }
 
 void loop() {
-    // Serial.println();
-    // Serial.println(deviceID.length());
-    // delay(5000);
   if(blink){
-    // digitalWrite(D7, HIGH);
-    // delay(500);
-    // digitalWrite(D7, LOW);
-    // delay(500);
     rainbow(5);
-    if(!blink){
-      for(int i = 0; i < 100; i++){
-        strip.setPixelColor(i, 0);
-      }
+    for(int i = 0; i < 100; i++){
+      strip.setPixelColor(i, 0);
     }
+    strip.show();
   }
   if(!verifyAddress){
     Serial.print("randomize address: ");
@@ -67,6 +61,7 @@ void loop() {
     address = random(64, 120);
     Serial.println(address);
     Wire.end();
+    Wire.setClock(400000);
     Wire.begin(address);
     Wire.onReceive(dataReceived);
     Wire.onRequest(dataRequest);
@@ -79,59 +74,70 @@ void loop() {
 char c;
 
 void dataReceived(int count){
+  Serial.println();
   int size = Wire.available();
   char inputBuffer[size];
   int counter = 0;
-
-  Serial.println("count: ");
-  Serial.println(Wire.available());
   Serial.println();
+  Serial.print("address: ");
+  Serial.println(address);
+  Serial.print("count: ");
+  Serial.println(Wire.available());
 
+  Serial.print("data received: ");
   while(Wire.available() > 0){
     c = Wire.read();
-    //Serial.println(c);
+    Serial.print(c);
     inputBuffer[counter] = c;
     counter++;
   }
-  Serial.println("data received: ");
-  Serial.println(inputBuffer);
+  Serial.println();
+
   if(size == 1){
     if(inputBuffer[0] == '1'){
       requestMode = 1;
     }else if(inputBuffer[0] == '2'){
       requestMode = 2;
     }else if(inputBuffer[0] == '3'){
+      Serial.println("blink on");
       blink = true;
     }else if(inputBuffer[0] == '4'){
+      Serial.println("blink off");
       blink = false;
-      for(int i = 0; i < 100; i++){
-        strip.setPixelColor(i, 0);
-      }
     }
   }else if(size == 24){
+    Serial.print("uuid: ");
+    Serial.println(deviceID);
     Serial.println("size 24");
     for(int i = 0; i < 24; i++){
-      Serial.print("deviceID char: ");
-      Serial.println(deviceID.charAt(i));
-      Serial.print(", inputBuffer char: ");
-      Serial.println(inputBuffer[i]);
       if(deviceID.charAt(i) != inputBuffer[i]){
-        Serial.println("BREAKOUT1");
+        Serial.println("BREAK");
         verifyAddress = false;
         break;
       }
     }
   }else if(size == 12){
-    String headBuffer = "";
-    String tailBuffer = "";
+    Serial.println("size 12");
+    char headBuffer[7];
+    char tailBuffer[7];
     for(int i = 0; i < 6; i++){
-      headBuffer += inputBuffer[i];
+      headBuffer[i] = inputBuffer[i];
+      tailBuffer[i] = inputBuffer[i + 6];
     }
-    for(int i = 6; i < 12; i++){
-      tailBuffer += inputBuffer[i];
-    }
-    headColor = strtoul(headBuffer.c_str(), nullptr, 16);
-    tailColor = strtoul(tailBuffer.c_str(), nullptr, 16);
+    headBuffer[6] = '\0';
+    tailBuffer[6] = '\0';
+    headColor = strtoul(headBuffer, 
+# 128 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino" 3 4
+                                   __null
+# 128 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
+                                       , 16);
+    tailColor = strtoul(tailBuffer, 
+# 129 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino" 3 4
+                                   __null
+# 129 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
+                                       , 16);
+    Serial.println(headColor, 16);
+    Serial.println(tailColor, 16);
   }else{
     for(int i = 0; i < size + 1; i++){
       if(strip.getPixelColor(i) == headColor || strip.getPixelColor(i) == tailColor){
@@ -172,20 +178,8 @@ void dataRequest(){
   }
 }
 
-// hal_i2c_config_t acquireWireBuffer() {
-//     hal_i2c_config_t config = {
-//         .size = sizeof(hal_i2c_config_t),
-//         .version = HAL_I2C_CONFIG_VERSION_1,
-//         .rx_buffer = new (std::nothrow) uint8_t[I2C_BUFFER_SIZE],
-//         .rx_buffer_size = I2C_BUFFER_SIZE,
-//         .tx_buffer = new (std::nothrow) uint8_t[I2C_BUFFER_SIZE],
-//         .tx_buffer_size = I2C_BUFFER_SIZE
-//     };
-//     return config;
-// }
-
 void rainbow(uint8_t wait) {
-  if(blink){
+  //if(blink){
     uint16_t i, j;
 
     for(j=0; j<256; j++) {
@@ -195,12 +189,13 @@ void rainbow(uint8_t wait) {
       strip.show();
       delay(wait);
     }
-  }else{
-    for(int i = 0; i < 100; i++){
-      strip.setPixelColor(i, 0);
-    }
-    strip.show();
-  }
+  //}
+  // else{
+  //   for(int i = 0; i < MAX_PIXELS; i++){
+  //     strip.setPixelColor(i, 0);
+  //   }
+  //   strip.show();
+  // }
 }
 
 // Input a value 0 to 255 to get a color value.

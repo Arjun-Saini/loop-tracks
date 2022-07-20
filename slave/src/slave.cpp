@@ -40,6 +40,7 @@ void setup() {
     address = random(8, 64);
   }
   acquireWireBuffer();
+  Wire.setClock(400000);
   Wire.begin(address);
   Wire.onReceive(dataReceived);
   Wire.onRequest(dataRequest);
@@ -68,6 +69,7 @@ void loop() {
     address = random(64, 120);
     Serial.println(address);
     Wire.end();
+    Wire.setClock(400000);
     Wire.begin(address);
     Wire.onReceive(dataReceived);
     Wire.onRequest(dataRequest);
