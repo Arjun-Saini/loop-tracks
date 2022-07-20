@@ -30,7 +30,7 @@ Railway redLineCTA = Railway(
   {25, 3, 7, 5}, //pixels in between each checkpoint, should have 1 less element than checkpoint vector
   {0, 40, 0, 0}, //size of each output segment: before loop, after loop, in loop, in green
   "red",
-  {"FF0000", "0A0000"}, //hex color values for head and body/tail of the train
+  {"ff0000", "0a0000"}, //hex color values for head and body/tail of the train
   {0, 0, 0, 0} //checkpoint bounds for lower loop, upper loop, lower green, upper green, these are only used for merging different rail colors onto one track
 );
 
@@ -40,7 +40,7 @@ Railway blueLineCTA = Railway(
   {12, 8, 5, 5, 5, 25},
   {0, 60, 0, 0},
   "blue",
-  {"0000FF", "00000A"},
+  {"0000ff", "00000a"},
   {0, 0, 0, 0}
 );
 
@@ -50,7 +50,7 @@ Railway brownLineCTA = Railway(
   {5, 15, 10, 10, 10, 10},
   {20, 0, 40, 0},
   "brown",
-  {"FFFF00", "0A0A00"},
+  {"ffff00", "0a0a00"},
   {2, 6, 0, 0}
 );
 
@@ -60,7 +60,7 @@ Railway greenLineCTA = Railway(
   {15, 10, 10, 15},
   {15, 15, 20, 0},
   "green",
-  {"00FF00", "000A00"},
+  {"00ff00", "000a00"},
   {1, 3, 0, 0}
 );
 
@@ -70,7 +70,7 @@ Railway orangeLineCTA = Railway(
   {12, 7, 1, 10, 10, 10, 10},
   {12, 0, 40, 8},
   "orange",
-  {"FF8000", "0A0500"},
+  {"ff8000", "0a0500"},
   {3, 7, 1, 3}
 );
 
@@ -80,7 +80,7 @@ Railway purpleLineCTA = Railway(
   {5, 15, 10, 10, 10, 10},
   {20, 0, 40, 0},
   "purple",
-  {"2000FF", "02000A"},
+  {"2000ff", "02000a"},
   {2, 6, 0, 0}
 );
 
@@ -90,7 +90,7 @@ Railway pinkLineCTA = Railway(
   {7, 7, 6, 10, 10, 10, 10},
   {14, 0, 40, 6},
   "pink",
-  {"FF8080", "0A0505"},
+  {"ff8080", "0a0505"},
   {3, 7, 2, 3}
 );
 
@@ -100,7 +100,7 @@ Railway redLineMBTA = Railway{
   {5, 10, 5, 10, 10, 10},
   {0, 50, 0, 0},
   "red",
-  {"FF0000", "0A0000"},
+  {"ff0000", "0a0000"},
   {0, 0, 0, 0},
 };
 
@@ -110,7 +110,7 @@ Railway blueLineMBTA = Railway{
   {20, 10, 10},
   {0, 40, 0, 0},
   "blue",
-  {"0000FF", "00000A"},
+  {"0000ff", "00000a"},
   {0, 0, 0, 0},
 };
 
@@ -120,7 +120,7 @@ Railway orangeLineMBTA = Railway{
   {10, 5, 10, 10, 10},
   {0, 45, 0, 0},
   "orange",
-  {"FF8000", "0A0500"},
+  {"ff8000", "0a0500"},
   {0, 0, 0, 0},
 };
 
@@ -130,7 +130,7 @@ Railway greenLine1MBTA = Railway{
   {10, 10, 10, 10, 10, 10, 10},
   {0, 70, 0, 0},
   "green",
-  {"00FF00", "000A00"},
+  {"00ff00", "000a00"},
   {0, 0, 0, 0},
 };
 
@@ -140,7 +140,7 @@ Railway greenLine2MBTA = Railway{
   {15},
   {0, 15, 0, 0},
   "green",
-  {"00FF00", "000A00"},
+  {"00ff00", "000a00"},
   {0, 0, 0, 0},
 };
 
@@ -209,6 +209,7 @@ void setup(){
   BLE.advertise(&data);
 
   acquireWireBuffer();
+  Wire.setClock(400000);
   Wire.begin();
   vl.begin();
 
@@ -221,13 +222,13 @@ void setup(){
   orangeLineCTA.setLoopIndex(3, 7);
   purpleLineCTA.setLoopIndex(2, 6);
   pinkLineCTA.setLoopIndex(3, 7);
-  ctaRailways = {brownLineCTA, orangeLineCTA, pinkLineCTA, purpleLineCTA, greenLineCTA};
+  ctaRailways = {brownLineCTA, purpleLineCTA, greenLineCTA};
 
   //greenLine1 and greenLine2 must be in adjacent in the vector
   mbtaRailways = {redLineMBTA, greenLine1MBTA, greenLine2MBTA, blueLineMBTA, orangeLineMBTA};
 
   //1 slave per line, except cta green which has 2 and cta purple which has 0 (7 for full cta)
-  cities = {City(ctaRailways, "cta", 5), City(mbtaRailways, "mbta", 5)};
+  cities = {City(ctaRailways, "cta", 3), City(mbtaRailways, "mbta", 5)};
 }
 
 void loop(){
@@ -235,13 +236,13 @@ void loop(){
     Serial.println("loop start");
 
     //MQTT
-    if(client.isConnected()){
-      client.subscribe("loop-tracks/twitter");
-      client.loop();
-      Serial.println("mqtt loop");
-    }else{
-      client.connect("sparkclient");
-    }
+    // if(client.isConnected()){
+    //   client.subscribe("loop-tracks/twitter");
+    //   client.loop();
+    //   Serial.println("mqtt loop");
+    // }else{
+    //   client.connect("sparkclient");
+    // }
 
     for(int i : sequenceArr){
       Serial.printf("%i, ", i);
@@ -251,12 +252,12 @@ void loop(){
     cityIndexBuffer = cityIndex;
     for(int j = 0; j < cities[cityIndexBuffer].railways.size(); j++){
       //rainbow led on when close proximity
-      Wire.lock();
+      //Wire.lock();
       uint8_t range = vl.readRange();
-      Wire.unlock();
+      //Wire.unlock();
       if (range <= 100) {
         Serial.println("proximity");
-        lightshow(1000);
+        //lightshow(1000);
       }
       delay(1000);
       if(cityIndex == -1){
@@ -476,7 +477,7 @@ void loop(){
         count++;
       }
 
-      Wire.lock();
+      //Wire.lock();
       //outputs train data to slaves
       for(int i = 0; i < 4; i++){
         //sets color of data being sent
@@ -560,7 +561,7 @@ void loop(){
         Serial.println();
         Wire.endTransmission();
       }
-      Wire.unlock();
+      //Wire.unlock();
       for(int i = 0; i < 4; i++){
         for(int j = 0; j < currentRailway.outputs[i].size(); j++){
           currentRailway.outputs[i][j] = 0;
@@ -574,8 +575,9 @@ void loop(){
 
 //clears up conflicts with multiple i2c slaves having the same address
 void randomizeAddress(){
-  Wire.lock();
+  //Wire.lock();
   while(slaveCount < cities[cityIndex].slaveCountExpected){
+    //delay(3000);
     Serial.printlnf("slaveCount: %i", slaveCount);
     slaveCount = 0;
     for(int i = 8; i <= 119; i++){
@@ -598,6 +600,7 @@ void randomizeAddress(){
           c = Wire.read();
           inputBuffer += c;
         }
+        Wire.flush();
         Wire.beginTransmission(i);
         Wire.write(inputBuffer);
         Serial.println("device id: " + inputBuffer);
@@ -607,7 +610,7 @@ void randomizeAddress(){
         Wire.beginTransmission(i);
         Wire.write('2');
         Wire.endTransmission();
-
+        
         Serial.println("request code 2, address: " + String(i));
         Wire.requestFrom(i, 4);
         inputBuffer = "";
@@ -628,6 +631,9 @@ void randomizeAddress(){
 
   int count = 0;
   for(int i = 8; i<= 119; i++){
+    if(i == 41){
+      continue;
+    }
     Wire.beginTransmission(i);
     Wire.write('1');
     Wire.endTransmission();
@@ -640,11 +646,11 @@ void randomizeAddress(){
       addressArr[count++] = i;
     }
   }
-  Wire.unlock();
+  //Wire.unlock();
 }
 
 void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context){
-  Wire.lock();
+  //Wire.lock();
   txCharacteristic.setValue("ok");
   String inputBuffer = "";
   String nameBuffer;
@@ -679,6 +685,7 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
     txCharacteristic.setValue("slave addresses sorted");
 
     //turn on led on first device
+    Serial.printlnf("turning on %i", addressArr[0]);
     Wire.beginTransmission(addressArr[0]);
     Wire.write('3');
     Wire.endTransmission();
@@ -740,22 +747,24 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
       }
 
       //turn off led, turn next device led on
+      Serial.printlnf("turning off %i", addressArr[bleCount]);
       Wire.beginTransmission(addressArr[bleCount]);
       Wire.write('4');
       Wire.endTransmission();
 
+      Serial.printlnf("turning on %i", addressArr[bleCount + 1]);
       Wire.beginTransmission(addressArr[bleCount + 1]);
       Wire.write('3');
       Wire.endTransmission();
     }
     if(bleCount == cities[cityIndex].railways.size() - 1){
       Serial.println("BLE finished");
-      // for(int i = 0; i < addressArr.size(); i++){
-      //   Serial.printlnf("turning off: %i", i);
-      //   Wire.beginTransmission(addressArr[i]);
-      //   Wire.write('4');
-      //   Wire.endTransmission();
-      // }
+      for(int i = 0; i < addressArr.size(); i++){
+        Serial.printlnf("turning off: %i", i);
+        Wire.beginTransmission(addressArr[i]);
+        Wire.write('4');
+        Wire.endTransmission();
+      }
       userInput = true;
       WiFi.on();
       WiFi.connect();
@@ -775,7 +784,7 @@ void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, 
     userInput = false;
     Serial.println("reset done");
   }
-  Wire.unlock();
+  //Wire.unlock();
 }
 
 hal_i2c_config_t acquireWireBuffer() {
@@ -791,7 +800,7 @@ hal_i2c_config_t acquireWireBuffer() {
 }
 
 void lightshow(int length){
-  Wire.lock();
+  //Wire.lock();
   for(int i = 0; i < addressArr.size(); i++){
     Wire.beginTransmission(addressArr[i]);
     Wire.write('3');
@@ -803,7 +812,7 @@ void lightshow(int length){
     Wire.write('4');
     Wire.endTransmission();
   }
-  Wire.unlock();
+  //Wire.unlock();
 }
 
 void callback(char* topic, byte* payload, unsigned int length){
