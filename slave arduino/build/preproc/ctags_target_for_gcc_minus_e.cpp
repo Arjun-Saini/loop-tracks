@@ -29,7 +29,8 @@ void setup() {
       deviceID += (_UniqueID.id + 9 - 9)[i];
     }
     while(deviceID.length() < 24){
-      deviceID += "0";
+      randomSeed(deviceID.toInt());
+      deviceID += String(random(0, 9));
     }
   randomSeed((unsigned long)(_UniqueID.id + 9 - 9));
   address = random(8, 64);
@@ -127,14 +128,14 @@ void dataReceived(int count){
     headBuffer[6] = '\0';
     tailBuffer[6] = '\0';
     headColor = strtoul(headBuffer, 
-# 128 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino" 3 4
-                                   __null
-# 128 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
-                                       , 16);
-    tailColor = strtoul(tailBuffer, 
 # 129 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino" 3 4
                                    __null
 # 129 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
+                                       , 16);
+    tailColor = strtoul(tailBuffer, 
+# 130 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino" 3 4
+                                   __null
+# 130 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
                                        , 16);
     Serial.println(headColor, 16);
     Serial.println(tailColor, 16);

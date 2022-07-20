@@ -20,7 +20,7 @@ SYSTEM_MODE(MANUAL)
 /*
 all loop segment sizes must be the same
 brown line receives all loop data for cta
-no output segment can be 12 or 24 pixels long, causes conflict with slave protocol
+no output segment can be 1, 12, or 24 pixels long, causes conflict with slave protocol
 */
 
 // Chinatown to North/Clybourn
@@ -223,13 +223,13 @@ void setup()
     orangeLineCTA.setLoopIndex(3, 7);
     purpleLineCTA.setLoopIndex(2, 6);
     pinkLineCTA.setLoopIndex(3, 7);
-    ctaRailways = {brownLineCTA, orangeLineCTA, pinkLineCTA};
+    ctaRailways = {brownLineCTA, purpleLineCTA, greenLineCTA, orangeLineCTA, pinkLineCTA, redLineCTA, blueLineCTA};
 
     // greenLine1 and greenLine2 must be in adjacent in the vector
     mbtaRailways = {redLineMBTA, greenLine1MBTA, greenLine2MBTA, blueLineMBTA, orangeLineMBTA};
 
     //1 slave per line, except cta green which has 2 and cta purple which has 0 (7 for full cta)
-    cities = {City(ctaRailways, "cta", 3), City(mbtaRailways, "mbta", 5)};
+    cities = {City(ctaRailways, "cta", 7), City(mbtaRailways, "mbta", 5)};
 }
 
 void loop()
@@ -430,8 +430,8 @@ void loop()
 }
 /**
  * Parses a train from the HTTP API and stores it in the railways array.
- * @param trainIndex The index of current train in the railway.
- * @param currentRailway the current railway we are on.
+ * @param trainIndex The index of train in the railway.
+ * @param currentRailway The current railway we are on.
  * @return true if there are no more trains to parse, false otherwise.
  */
 bool parseTrain(int trainIndex, Railway &currentRailway)
@@ -692,9 +692,11 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
     return false;
 }
 
-// clears up conflicts with multiple i2c slaves having the same address
+String *deviceIDArr;
+// Clears up conflicts with multiple i2c slaves having the same address.
 void randomizeAddress()
 {
+    deviceIDArr = new String[cities[cityIndex].slaveCountExpected];
     while (slaveCount < cities[cityIndex].slaveCountExpected)
     {
         Serial.printlnf("slaveCount: %i", slaveCount);
@@ -726,6 +728,7 @@ void randomizeAddress()
                 Wire.beginTransmission(i);
                 Wire.write(inputBuffer);
                 Serial.println("device id: " + inputBuffer);
+                deviceIDArr[slaveCount] = inputBuffer;
                 Wire.endTransmission();
                 Serial.println("transmission sent to: " + String(i));
 
@@ -773,8 +776,14 @@ void randomizeAddress()
             addressArr[count++] = i;
         }
     }
+    Serial.println();
+    for (int i = 0; i < slaveCount; i++)
+    {
+        Serial.println(deviceIDArr[i]);
+    }
 }
 
+// Communication with app, configures city and rail colors.
 void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, void *context)
 {
     txCharacteristic.setValue("ok");
@@ -943,6 +952,7 @@ void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, 
     }
 }
 
+// Increases I2C buffer size
 hal_i2c_config_t acquireWireBuffer()
 {
     hal_i2c_config_t config = {
@@ -955,6 +965,10 @@ hal_i2c_config_t acquireWireBuffer()
     return config;
 }
 
+/**
+ * @brief Sends rainbow command to every slave.
+ * @param length Duration in ms for rainbow to last.
+ */
 void lightshow(int length)
 {
     for (int i = 0; i < addressArr.size(); i++)
@@ -972,6 +986,7 @@ void lightshow(int length)
     }
 }
 
+// MQTT callback for twitter response
 void callback(char *topic, byte *payload, unsigned int length)
 {
     Serial.println("twitter");

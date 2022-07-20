@@ -28,7 +28,8 @@ void setup() {
       deviceID += UniqueID[i];
     }
     while(deviceID.length() < 24){
-      deviceID += "0";
+      randomSeed(deviceID.toInt());
+      deviceID += String(random(0, 9));
     }
   randomSeed((unsigned long)UniqueID);
   address = random(8, 64);

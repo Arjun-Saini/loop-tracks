@@ -25,11 +25,11 @@ uint32_t Wheel(byte WheelPos);
 
 #line 25 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
 void setup();
-#line 49 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
+#line 50 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
 void loop();
-#line 75 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
+#line 76 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
 void dataReceived(int count);
-#line 152 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
+#line 153 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
 void dataRequest();
 #line 25 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
 void setup() {
@@ -38,7 +38,8 @@ void setup() {
       deviceID += UniqueID[i];
     }
     while(deviceID.length() < 24){
-      deviceID += "0";
+      randomSeed(deviceID.toInt());
+      deviceID += String(random(0, 9));
     }
   randomSeed((unsigned long)UniqueID);
   address = random(8, 64);

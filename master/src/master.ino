@@ -212,13 +212,13 @@ void setup()
     orangeLineCTA.setLoopIndex(3, 7);
     purpleLineCTA.setLoopIndex(2, 6);
     pinkLineCTA.setLoopIndex(3, 7);
-    ctaRailways = {brownLineCTA, orangeLineCTA, pinkLineCTA};
+    ctaRailways = {brownLineCTA, purpleLineCTA, greenLineCTA, orangeLineCTA, pinkLineCTA, redLineCTA, blueLineCTA};
 
     // greenLine1 and greenLine2 must be in adjacent in the vector
     mbtaRailways = {redLineMBTA, greenLine1MBTA, greenLine2MBTA, blueLineMBTA, orangeLineMBTA};
 
     //1 slave per line, except cta green which has 2 and cta purple which has 0 (7 for full cta)
-    cities = {City(ctaRailways, "cta", 3), City(mbtaRailways, "mbta", 5)};
+    cities = {City(ctaRailways, "cta", 7), City(mbtaRailways, "mbta", 5)};
 }
 
 void loop()
@@ -681,9 +681,11 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
     return false;
 }
 
+String *deviceIDArr;
 // Clears up conflicts with multiple i2c slaves having the same address.
 void randomizeAddress()
 {
+    deviceIDArr = new String[cities[cityIndex].slaveCountExpected];
     while (slaveCount < cities[cityIndex].slaveCountExpected)
     {
         Serial.printlnf("slaveCount: %i", slaveCount);
@@ -715,6 +717,7 @@ void randomizeAddress()
                 Wire.beginTransmission(i);
                 Wire.write(inputBuffer);
                 Serial.println("device id: " + inputBuffer);
+                deviceIDArr[slaveCount] = inputBuffer;
                 Wire.endTransmission();
                 Serial.println("transmission sent to: " + String(i));
 
@@ -761,6 +764,11 @@ void randomizeAddress()
 
             addressArr[count++] = i;
         }
+    }
+    Serial.println();
+    for (int i = 0; i < slaveCount; i++)
+    {
+        Serial.println(deviceIDArr[i]);
     }
 }
 
