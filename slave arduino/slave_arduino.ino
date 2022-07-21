@@ -31,10 +31,10 @@ void setup() {
       randomSeed(deviceID.toInt());
       deviceID += String(random(0, 9));
     }
-  randomSeed((unsigned long)UniqueID);
-  address = random(8, 64);
+  randomSeed(deviceID.substring(18).toInt());
+  address = random(8, 120);
   while(address == 41){
-    address = random(8, 64);
+    address = random(8, 120);
   }
   //acquireWireBuffer();
   Wire.setClock(400000);
@@ -58,7 +58,10 @@ void loop() {
   if(!verifyAddress){
     Serial.print("randomize address: ");
     Serial.println(address);
-    address = random(64, 120);
+    address = random(8, 120);
+    while(address == 41){
+    address = random(8, 120);
+    }
     Serial.println(address);
     Wire.end();
     Wire.setClock(400000);

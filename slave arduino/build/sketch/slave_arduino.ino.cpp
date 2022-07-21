@@ -27,9 +27,9 @@ uint32_t Wheel(byte WheelPos);
 void setup();
 #line 50 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
 void loop();
-#line 76 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
+#line 79 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
 void dataReceived(int count);
-#line 153 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
+#line 156 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
 void dataRequest();
 #line 25 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
 void setup() {
@@ -41,10 +41,10 @@ void setup() {
       randomSeed(deviceID.toInt());
       deviceID += String(random(0, 9));
     }
-  randomSeed((unsigned long)UniqueID);
-  address = random(8, 64);
+  randomSeed(deviceID.substring(18).toInt());
+  address = random(8, 120);
   while(address == 41){
-    address = random(8, 64);
+    address = random(8, 120);
   }
   //acquireWireBuffer();
   Wire.setClock(400000);
@@ -68,7 +68,10 @@ void loop() {
   if(!verifyAddress){
     Serial.print("randomize address: ");
     Serial.println(address);
-    address = random(64, 120);
+    address = random(8, 120);
+    while(address == 41){
+    address = random(8, 120);
+    }
     Serial.println(address);
     Wire.end();
     Wire.setClock(400000);

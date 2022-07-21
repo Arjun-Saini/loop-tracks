@@ -682,6 +682,8 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
 }
 
 String *deviceIDArr;
+int iterationCount = 0;
+int i2cRequestCount = 0;
 // Clears up conflicts with multiple i2c slaves having the same address.
 void randomizeAddress()
 {
@@ -690,8 +692,10 @@ void randomizeAddress()
     {
         Serial.printlnf("slaveCount: %i", slaveCount);
         slaveCount = 0;
+        iterationCount++;
         for (int i = 8; i <= 119; i++)
         {
+            i2cRequestCount++;
             if (i == 41)
             {
                 continue;
@@ -770,6 +774,8 @@ void randomizeAddress()
     {
         Serial.println(deviceIDArr[i]);
     }
+    Serial.println(iterationCount);
+    Serial.println(i2cRequestCount);
 }
 
 // Communication with app, configures city and rail colors.

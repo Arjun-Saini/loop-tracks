@@ -32,10 +32,10 @@ void setup() {
       randomSeed(deviceID.toInt());
       deviceID += String(random(0, 9));
     }
-  randomSeed((unsigned long)(_UniqueID.id + 9 - 9));
-  address = random(8, 64);
+  randomSeed(deviceID.substring(18).toInt());
+  address = random(8, 120);
   while(address == 41){
-    address = random(8, 64);
+    address = random(8, 120);
   }
   //acquireWireBuffer();
   Wire.setClock(400000);
@@ -59,7 +59,10 @@ void loop() {
   if(!verifyAddress){
     Serial.print("randomize address: ");
     Serial.println(address);
-    address = random(64, 120);
+    address = random(8, 120);
+    while(address == 41){
+    address = random(8, 120);
+    }
     Serial.println(address);
     Wire.end();
     Wire.setClock(400000);
@@ -128,14 +131,14 @@ void dataReceived(int count){
     headBuffer[6] = '\0';
     tailBuffer[6] = '\0';
     headColor = strtoul(headBuffer, 
-# 129 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino" 3 4
+# 132 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino" 3 4
                                    __null
-# 129 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
+# 132 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
                                        , 16);
     tailColor = strtoul(tailBuffer, 
-# 130 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino" 3 4
+# 133 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino" 3 4
                                    __null
-# 130 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
+# 133 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
                                        , 16);
     Serial.println(headColor, 16);
     Serial.println(tailColor, 16);
