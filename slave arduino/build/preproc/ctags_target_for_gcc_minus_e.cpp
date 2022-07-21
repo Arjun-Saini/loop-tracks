@@ -24,20 +24,26 @@ void rainbow(uint8_t wait);
 uint32_t Wheel(byte WheelPos);
 
 void setup() {
-    Serial.begin(115200);
-    for(size_t i = 0; i < 9; i++){
-      deviceID += (_UniqueID.id + 9 - 9)[i];
-    }
-    while(deviceID.length() < 24){
-      randomSeed(deviceID.toInt());
-      deviceID += String(random(0, 9));
-    }
+  Serial.begin(115200);
+
+  //generates unique device id
+  for(size_t i = 0; i < 9; i++){
+    deviceID += (_UniqueID.id + 9 - 9)[i];
+  }
+  while(deviceID.length() < 24){
+    randomSeed(deviceID.toInt());
+    deviceID += String(random(0, 9));
+  }
+
+  //uses last 6 digits of device id as random seed
   randomSeed(deviceID.substring(18).toInt());
   address = random(8, 120);
+
+  //address 41 is for VL6180
   while(address == 41){
     address = random(8, 120);
   }
-  //acquireWireBuffer();
+
   Wire.setClock(400000);
   Wire.begin(address);
   Wire.onReceive(dataReceived);
@@ -61,9 +67,10 @@ void loop() {
     Serial.println(address);
     address = random(8, 120);
     while(address == 41){
-    address = random(8, 120);
+      address = random(8, 120);
     }
     Serial.println(address);
+
     Wire.end();
     Wire.setClock(400000);
     Wire.begin(address);
@@ -131,14 +138,14 @@ void dataReceived(int count){
     headBuffer[6] = '\0';
     tailBuffer[6] = '\0';
     headColor = strtoul(headBuffer, 
-# 132 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino" 3 4
+# 139 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino" 3 4
                                    __null
-# 132 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
+# 139 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
                                        , 16);
     tailColor = strtoul(tailBuffer, 
-# 133 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino" 3 4
+# 140 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino" 3 4
                                    __null
-# 133 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
+# 140 "/Users/sainihome/Documents/GitHub/loop-tracks/slave arduino/slave_arduino.ino"
                                        , 16);
     Serial.println(headColor, 16);
     Serial.println(tailColor, 16);
@@ -172,6 +179,7 @@ void dataRequest(){
     }
     case 2:{
       Serial.println("request mode 2");
+      Serial.println((unsigned long)(_UniqueID.id + 9 - 9));
       if(verifyAddress){
         Wire.write("pass");
       }else{
