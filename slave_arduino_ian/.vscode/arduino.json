@@ -1,6 +1,0 @@
-{
-    "board": "arduino:avr:uno",
-    "port": "/dev/tty.usbserial-1430",
-    "sketch": "Slave.ino",
-    "programmer": "arduino:avrisp"
-}
