@@ -225,6 +225,8 @@ void setup()
     //1 slave per line, except cta green which has 2 and cta purple which has 0 (7 for full cta)
     //there needs to be the same number of rail lines and slaves expected
     cities = {City(ctaRailways, "cta", 7), City(mbtaRailways, "mbta", 5)};
+
+    display1.begin(0x71);
 }
 
 void loop()
