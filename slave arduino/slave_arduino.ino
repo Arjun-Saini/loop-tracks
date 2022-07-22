@@ -36,11 +36,11 @@ void setup() {
 
   //uses last 6 digits of device id as random seed
   randomSeed(deviceID.substring(18).toInt());
-  address = random(8, 120);
+  address = random(8, 111);
 
   //address 41 is for VL6180
   while(address == 41){
-    address = random(8, 120);
+    address = random(8, 111);
   }
 
   Wire.setClock(400000);
@@ -64,9 +64,9 @@ void loop() {
   if(!verifyAddress){
     Serial.print("randomize address: ");
     Serial.println(address);
-    address = random(8, 120);
+    address = random(8, 111);
     while(address == 41){
-      address = random(8, 120);
+      address = random(8, 111);
     }
     Serial.println(address);
 

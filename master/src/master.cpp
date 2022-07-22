@@ -16,6 +16,8 @@ SYSTEM_MODE(MANUAL)
 #include "City.cpp"
 #include "Adafruit_VL6180X.h"
 #include "MQTT.h"
+#include "Adafruit_GFX_RK.h"
+#include "Adafruit_LEDBackpack_RK.h"
 
 /*
 all loop segment sizes must be the same
@@ -160,6 +162,7 @@ bool parseTrain(int trainIndex, Railway &currentRailway);
 void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, void *context);
 void lightshow(int length);
 void callback(char *topic, byte *payload, unsigned int length);
+void alphaDisplay(Adafruit_AlphaNum4 display, String str);
 
 // const BleUuid serviceUuid("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
 // const BleUuid rxUuid("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
@@ -188,6 +191,8 @@ JsonParserStatic<10000, 1000> parser;
 
 String SSID = "";
 String password = "";
+
+Adafruit_AlphaNum4 display1 = Adafruit_AlphaNum4();
 
 bool userInput = false;
 
@@ -238,6 +243,8 @@ void loop()
     if (WiFi.hasCredentials() && userInput)
     {
         Serial.println("loop start");
+
+        alphaDisplay(display1, "Test");
 
         for (int i : sequenceArr)
         {
@@ -705,7 +712,7 @@ void randomizeAddress()
         Serial.printlnf("slaveCount: %i", slaveCount);
         slaveCount = 0;
         iterationCount++;
-        for (int i = 8; i <= 119; i++)
+        for (int i = 8; i <= 111; i++)
         {
             i2cRequestCount++;
             if (i == 41)
@@ -765,7 +772,7 @@ void randomizeAddress()
     Serial.println("\nConnected to: ");
 
     int count = 0;
-    for (int i = 8; i <= 119; i++)
+    for (int i = 8; i <= 111; i++)
     {
         if(i == 41)
         {
@@ -1001,4 +1008,12 @@ void callback(char *topic, byte *payload, unsigned int length)
 {
     Serial.println("twitter");
     lightshow(3000);
+}
+
+// Display 4 characters on the display
+void alphaDisplay(Adafruit_AlphaNum4 display, String str){
+    for(int i = 0; i < 4; i++){
+        display.writeDigitAscii(i, str.charAt(i));
+    }
+    display.writeDisplay();
 }
