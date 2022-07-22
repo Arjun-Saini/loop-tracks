@@ -1,4 +1,0 @@
-(fp_lib_table
-  (lib (name "Adafruit NeoPixel 8 Stick")(type "KiCad")(uri "$(KIPRJMOD)/Adafruit NeoPixel 8 Stick.pretty")(options "")(descr "")(disabled))
-  (lib (name "Adafruit VL6180 Time of Flight Sensor")(type "KiCad")(uri "${KIPRJMOD}/Adafruit VL6180 Time of Flight Sensor/Adafruit VL6180 Time of Flight Sensor.pretty")(options "")(descr ""))
-)
