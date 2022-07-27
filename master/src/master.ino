@@ -1,4 +1,5 @@
-SYSTEM_MODE(MANUAL)
+SYSTEM_MODE(AUTOMATIC);
+SYSTEM_THREAD(ENABLED);
 
 #include "HttpClient.h"
 #include "JsonParserGeneratorRK.h"
@@ -211,14 +212,14 @@ void setup()
     orangeLineCTA.setLoopIndex(3, 7);
     purpleLineCTA.setLoopIndex(2, 6);
     pinkLineCTA.setLoopIndex(3, 7);
-    ctaRailways = {brownLineCTA, purpleLineCTA, greenLineCTA, orangeLineCTA, pinkLineCTA, redLineCTA, blueLineCTA};
+    ctaRailways = {brownLineCTA, orangeLineCTA}; // {brownLineCTA, purpleLineCTA, greenLineCTA, orangeLineCTA, pinkLineCTA, redLineCTA, blueLineCTA};
 
     // greenLine1 and greenLine2 must be in adjacent in the vector
     mbtaRailways = {redLineMBTA, greenLine1MBTA, greenLine2MBTA, blueLineMBTA, orangeLineMBTA};
 
     // 1 slave per line, except cta green which has 2 and cta purple which has 0 (7 for full cta)
     // there needs to be the same number of rail lines and slaves expected
-    cities = {City(ctaRailways, "cta", 7), City(mbtaRailways, "mbta", 5)};
+    cities = {City(ctaRailways, "cta", 2), City(mbtaRailways, "mbta", 5)};
 
     display1.begin(0x71);
 }
@@ -240,8 +241,12 @@ void loop()
         cityIndexBuffer = cityIndex;
         for (int j = 0; j < cities[cityIndexBuffer].railways.size(); j++)
         {
+
             // rainbow led on when close proximity
             uint8_t range = vl.readRange();
+
+            Serial.printlnf("range: %i", range);
+
             if (range <= 100)
             {
                 Serial.println("proximity");
@@ -260,8 +265,6 @@ void loop()
             {
                 client.connect("sparkclient");
             }
-
-            delay(1000);
 
             if (cityIndex == -1)
             {
@@ -406,7 +409,6 @@ void loop()
                     Serial.print(currentRailway.outputs[i][j]);
                     // currentRailway.outputs[i][j] = 0;
                 }
-                Serial.println();
                 Wire.endTransmission();
             }
             for (int i = 0; i < 4; i++)
