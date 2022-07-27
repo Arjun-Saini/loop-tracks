@@ -16,123 +16,117 @@ no output segment can be 1, 12, or 24 pixels long, causes conflict with slave pr
 
 // Chinatown to North/Clybourn
 Railway redLineCTA = Railway(
-  //checkpoints in order starting at slave position, should be a checkpoint at each bend/turn, no 3 adjacent checkpoints can form an angle smaller than 90 degrees
-  {Checkpoint(41.853028, -87.63109), Checkpoint(41.9041, -87.628921), Checkpoint(41.903888, -87.639506), Checkpoint(41.913732, -87.652380), Checkpoint(41.9253, -87.65286)},
-  {25, 3, 7, 5}, //pixels in between each checkpoint, should have 1 less element than checkpoint vector
-  {0, 40, 0, 0}, //size of each output segment: before loop, after loop, in loop, in green
-  "red",
-  {"ff0000", "0a0000"}, //hex color values for head and body/tail of the train
-  {0, 0, 0, 0} //checkpoint bounds for lower loop, upper loop, lower green, upper green, these are only used for merging different rail colors onto one track
+    // checkpoints in order starting at slave position, should be a checkpoint at each bend/turn, no 3 adjacent checkpoints can form an angle smaller than 90 degrees
+    {Checkpoint(41.853028, -87.63109), Checkpoint(41.9041, -87.628921), Checkpoint(41.903888, -87.639506), Checkpoint(41.913732, -87.652380), Checkpoint(41.9253, -87.65286)},
+    {25, 3, 7, 5}, // pixels in between each checkpoint, should have 1 less element than checkpoint vector
+    {0, 40, 0, 0}, // size of each output segment: before loop, after loop, in loop, in green
+    "red",
+    {"ff0000", "0a0000"}, // hex color values for head and body/tail of the train
+    {0, 0, 0, 0}          // checkpoint bounds for lower loop, upper loop, lower green, upper green, these are only used for merging different rail colors onto one track
 );
 
 // Pulaski to Western (O'Hare branch)
 Railway blueLineCTA = Railway(
-  {Checkpoint(41.873647, -87.727931), Checkpoint(41.875666, -87.672961), Checkpoint(41.875293, -87.640976), Checkpoint(41.875660, -87.627620), Checkpoint(41.885738, -87.629540), Checkpoint(41.885698, -87.639828), Checkpoint(41.915497, -87.686258)},
-  {12, 8, 5, 5, 5, 25},
-  {0, 60, 0, 0},
-  "blue",
-  {"0000ff", "00000a"},
-  {0, 0, 0, 0}
-);
+    {Checkpoint(41.873647, -87.727931), Checkpoint(41.875666, -87.672961), Checkpoint(41.875293, -87.640976), Checkpoint(41.875660, -87.627620), Checkpoint(41.885738, -87.629540), Checkpoint(41.885698, -87.639828), Checkpoint(41.915497, -87.686258)},
+    {12, 8, 5, 5, 5, 25},
+    {0, 60, 0, 0},
+    "blue",
+    {"0000ff", "00000a"},
+    {0, 0, 0, 0});
 
 // Sedgewick to Loop
 Railway brownLineCTA = Railway(
-  {Checkpoint(41.9107586, -87.648068), Checkpoint(41.9103656, -87.6373962), Checkpoint(41.885840, -87.633990), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.885921, -87.626137), Checkpoint(41.885840, -87.633990)},
-  {5, 15, 10, 10, 10, 10},
-  {20, 0, 40, 0},
-  "brown",
-  {"ffff00", "0a0a00"},
-  {2, 6, 0, 0}
-);
+    {Checkpoint(41.9107586, -87.648068), Checkpoint(41.9103656, -87.6373962), Checkpoint(41.885840, -87.633990), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.885921, -87.626137), Checkpoint(41.885840, -87.633990)},
+    {5, 15, 10, 10, 10, 10},
+    {20, 0, 40, 0},
+    "brown",
+    {"ffff00", "0a0a00"},
+    {2, 6, 0, 0});
 
 // Cermak-McCormick to Kedzie
 Railway greenLineCTA = Railway(
-  {Checkpoint(41.853115, -87.626402), Checkpoint(41.876946, -87.626046), Checkpoint(41.885921, -87.626137), Checkpoint(41.885724, -87.633945), Checkpoint(41.88422, -87.696234)},
-  {15, 10, 10, 15},
-  {15, 15, 20, 0},
-  "green",
-  {"00ff00", "000a00"},
-  {1, 3, 0, 0}
-);
+    {Checkpoint(41.853115, -87.626402), Checkpoint(41.876946, -87.626046), Checkpoint(41.885921, -87.626137), Checkpoint(41.885724, -87.633945), Checkpoint(41.88422, -87.696234)},
+    {15, 10, 10, 15},
+    {15, 15, 20, 0},
+    "green",
+    {"00ff00", "000a00"},
+    {1, 3, 0, 0});
 
 // Halsted to Loop
 Railway orangeLineCTA = Railway(
-  {Checkpoint(41.84678, -87.648088), Checkpoint(41.85817, -87.627117), Checkpoint(41.875689, -87.626019), Checkpoint(41.876955, -87.626044), Checkpoint(41.885921, -87.626137), Checkpoint(41.885840, -87.633990), Checkpoint(41.876835, -87.633710), Checkpoint(41.8767992, -87.6255196)},
-  {12, 7, 1, 10, 10, 10, 10},
-  {12, 0, 40, 8},
-  "orange",
-  {"ff8000", "0a0500"},
-  {3, 7, 1, 3}
-);
+    {Checkpoint(41.84678, -87.648088), Checkpoint(41.85817, -87.627117), Checkpoint(41.875689, -87.626019), Checkpoint(41.876955, -87.626044), Checkpoint(41.885921, -87.626137), Checkpoint(41.885840, -87.633990), Checkpoint(41.876835, -87.633710), Checkpoint(41.8767992, -87.6255196)},
+    {12, 7, 1, 10, 10, 10, 10},
+    {12, 0, 40, 8},
+    "orange",
+    {"ff8000", "0a0500"},
+    {3, 7, 1, 3});
 
 // Sedgewick to Loop
 Railway purpleLineCTA = Railway(
-  {Checkpoint(41.9107586, -87.648068), Checkpoint(41.9103656, -87.6373962), Checkpoint(41.885840, -87.633990), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.885921, -87.626137), Checkpoint(41.885840, -87.633990)},
-  {5, 15, 10, 10, 10, 10},
-  {20, 0, 40, 0},
-  "purple",
-  {"2000ff", "02000a"},
-  {2, 6, 0, 0}
-);
+    {Checkpoint(41.9107586, -87.648068), Checkpoint(41.9103656, -87.6373962), Checkpoint(41.885840, -87.633990), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.885921, -87.626137), Checkpoint(41.885840, -87.633990)},
+    {5, 15, 10, 10, 10, 10},
+    {20, 0, 40, 0},
+    "purple",
+    {"2000ff", "02000a"},
+    {2, 6, 0, 0});
 
 // Kedzie to Loop
 Railway pinkLineCTA = Railway(
-  {Checkpoint(41.853964, -87.705408), Checkpoint(41.854856, -87.6695341), Checkpoint(41.8849389, -87.6696133), Checkpoint(41.885840, -87.633990), Checkpoint(41.885921, -87.626137), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.885840, -87.633990)},
-  {7, 7, 6, 10, 10, 10, 10},
-  {14, 0, 40, 6},
-  "pink",
-  {"ff8080", "0a0505"},
-  {3, 7, 2, 3}
-);
+    {Checkpoint(41.853964, -87.705408), Checkpoint(41.854856, -87.6695341), Checkpoint(41.8849389, -87.6696133), Checkpoint(41.885840, -87.633990), Checkpoint(41.885921, -87.626137), Checkpoint(41.8767992, -87.6255196), Checkpoint(41.8770372, -87.6342823), Checkpoint(41.885840, -87.633990)},
+    {7, 7, 6, 10, 10, 10, 10},
+    {14, 0, 40, 6},
+    "pink",
+    {"ff8080", "0a0505"},
+    {3, 7, 2, 3});
 
 /// JFK/UMass to Harvard
 Railway redLineMBTA = Railway{
-  {Checkpoint(42.320414, -71.052139), Checkpoint(42.327649, -71.057760), Checkpoint(42.344627, -71.056986), Checkpoint(42.350559, -71.052613), Checkpoint(42.360982, -71.070116), Checkpoint(42.363490, -71.100487), Checkpoint(42.372535, -71.115947)},
-  {5, 10, 5, 10, 10, 10},
-  {0, 50, 0, 0},
-  "red",
-  {"ff0000", "0a0000"},
-  {0, 0, 0, 0},
+    {Checkpoint(42.320414, -71.052139), Checkpoint(42.327649, -71.057760), Checkpoint(42.344627, -71.056986), Checkpoint(42.350559, -71.052613), Checkpoint(42.360982, -71.070116), Checkpoint(42.363490, -71.100487), Checkpoint(42.372535, -71.115947)},
+    {5, 10, 5, 10, 10, 10},
+    {0, 50, 0, 0},
+    "red",
+    {"ff0000", "0a0000"},
+    {0, 0, 0, 0},
 };
 
 // Wood Island to Bowdoin
 Railway blueLineMBTA = Railway{
-  {Checkpoint(42.379551, -71.023236), Checkpoint(42.360008, -71.047623), Checkpoint(42.359257, -71.059615), Checkpoint(42.361149, -71.062128)},
-  {20, 10, 10},
-  {0, 40, 0, 0},
-  "blue",
-  {"0000ff", "00000a"},
-  {0, 0, 0, 0},
+    {Checkpoint(42.379551, -71.023236), Checkpoint(42.360008, -71.047623), Checkpoint(42.359257, -71.059615), Checkpoint(42.361149, -71.062128)},
+    {20, 10, 10},
+    {0, 40, 0, 0},
+    "blue",
+    {"0000ff", "00000a"},
+    {0, 0, 0, 0},
 };
 
 // Roxbury Crossing to Wellington
 Railway orangeLineMBTA = Railway{
-  {Checkpoint(42.331520, -71.095285), Checkpoint(42.347474, -71.076055), Checkpoint(42.346967, -71.064553), Checkpoint(42.357606, -71.057324), Checkpoint(42.377410, -71.075941), Checkpoint(42.403125, -71.077024)},
-  {10, 5, 10, 10, 10},
-  {0, 45, 0, 0},
-  "orange",
-  {"ff8000", "0a0500"},
-  {0, 0, 0, 0},
+    {Checkpoint(42.331520, -71.095285), Checkpoint(42.347474, -71.076055), Checkpoint(42.346967, -71.064553), Checkpoint(42.357606, -71.057324), Checkpoint(42.377410, -71.075941), Checkpoint(42.403125, -71.077024)},
+    {10, 5, 10, 10, 10},
+    {0, 45, 0, 0},
+    "orange",
+    {"ff8000", "0a0500"},
+    {0, 0, 0, 0},
 };
 
 // Kenmore to Union Square
 Railway greenLine1MBTA = Railway{
-  {Checkpoint(42.348957, -71.095080), Checkpoint(42.349616, -71.079112), Checkpoint(42.351835, -71.070836), Checkpoint(42.352342, -71.064498), Checkpoint(42.362111, -71.057983), Checkpoint(42.366666, -71.061263), Checkpoint(42.365633, -71.064124), Checkpoint(42.377506, -71.095170)},
-  {10, 10, 10, 10, 10, 10, 10},
-  {0, 70, 0, 0},
-  "green",
-  {"00ff00", "000a00"},
-  {0, 0, 0, 0},
+    {Checkpoint(42.348957, -71.095080), Checkpoint(42.349616, -71.079112), Checkpoint(42.351835, -71.070836), Checkpoint(42.352342, -71.064498), Checkpoint(42.362111, -71.057983), Checkpoint(42.366666, -71.061263), Checkpoint(42.365633, -71.064124), Checkpoint(42.377506, -71.095170)},
+    {10, 10, 10, 10, 10, 10, 10},
+    {0, 70, 0, 0},
+    "green",
+    {"00ff00", "000a00"},
+    {0, 0, 0, 0},
 };
 
 // Longwood Medical Center to Back Bay(merges with green1)
 Railway greenLine2MBTA = Railway{
-  {Checkpoint(42.335878, -71.100229), Checkpoint(42.349616, -71.079112)},
-  {15},
-  {0, 15, 0, 0},
-  "green",
-  {"00ff00", "000a00"},
-  {0, 0, 0, 0},
+    {Checkpoint(42.335878, -71.100229), Checkpoint(42.349616, -71.079112)},
+    {15},
+    {0, 15, 0, 0},
+    "green",
+    {"00ff00", "000a00"},
+    {0, 0, 0, 0},
 };
 
 std::vector<City> cities;
@@ -205,7 +199,7 @@ void setup()
 
     acquireWireBuffer();
     Wire.setClock(400000);
-    Wire.begin();  
+    Wire.begin();
     vl.begin();
 
     // request.hostname = "lapi.transitchicago.com";
@@ -222,8 +216,8 @@ void setup()
     // greenLine1 and greenLine2 must be in adjacent in the vector
     mbtaRailways = {redLineMBTA, greenLine1MBTA, greenLine2MBTA, blueLineMBTA, orangeLineMBTA};
 
-    //1 slave per line, except cta green which has 2 and cta purple which has 0 (7 for full cta)
-    //there needs to be the same number of rail lines and slaves expected
+    // 1 slave per line, except cta green which has 2 and cta purple which has 0 (7 for full cta)
+    // there needs to be the same number of rail lines and slaves expected
     cities = {City(ctaRailways, "cta", 7), City(mbtaRailways, "mbta", 5)};
 
     display1.begin(0x71);
@@ -765,7 +759,7 @@ void randomizeAddress()
     int count = 0;
     for (int i = 8; i <= 111; i++)
     {
-        if(i == 41)
+        if (i == 41)
         {
             continue;
         }
@@ -1002,8 +996,10 @@ void callback(char *topic, byte *payload, unsigned int length)
 }
 
 // Display 4 characters on the display
-void alphaDisplay(Adafruit_AlphaNum4 display, String str){
-    for(int i = 0; i < 4; i++){
+void alphaDisplay(Adafruit_AlphaNum4 display, String str)
+{
+    for (int i = 0; i < 4; i++)
+    {
         display.writeDigitAscii(i, str.charAt(i));
     }
     display.writeDisplay();
