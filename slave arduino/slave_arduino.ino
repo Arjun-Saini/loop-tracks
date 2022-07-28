@@ -144,6 +144,7 @@ void dataReceived(int count)
         else if (inputBuffer[0] == '5')
         {
             // do OTA updates here
+            return;
         }
     }
     else if (size == 24)
