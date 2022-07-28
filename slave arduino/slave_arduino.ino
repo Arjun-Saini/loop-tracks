@@ -13,7 +13,7 @@ volatile bool verifyAddress = true;
 volatile int requestMode = 0;
 volatile bool blink = false;
 volatile bool clear = false;
-volatile bool update = false;
+volatile bool refresh = false;
 volatile uint32_t headColor;
 volatile uint32_t tailColor;
 
@@ -96,9 +96,9 @@ void loop()
         verifyAddress = true;
     }
 
-    if (update)
+    if (refresh)
     {
-        update = false;
+        refresh = false;
         strip.show();
     }
 }
@@ -140,6 +140,10 @@ void dataReceived(int count)
             blink = false;
             clear = true;
             return;
+        }
+        else if (inputBuffer[0] == '5')
+        {
+            // do OTA updates here
         }
     }
     else if (size == 24)
@@ -192,7 +196,7 @@ void dataReceived(int count)
                 strip.setPixelColor(i + 1, tailColor);
             }
         }
-        update = true;
+        refresh = true;
         return;
     }
 }
