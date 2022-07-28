@@ -64,10 +64,6 @@ void loop()
     if (blink)
     {
         rainbow(5);
-        for (int i = 0; i < MAX_PIXELS; i++)
-        {
-            strip.setPixelColor(i, 0);
-        }
         strip.show();
     }
 
@@ -135,6 +131,7 @@ void dataReceived(int count)
         else if (inputBuffer[0] == '4')
         {
             blink = false;
+            update = true;
             strip.clear();
             return;
         }
