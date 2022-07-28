@@ -64,7 +64,6 @@ void loop()
     if (blink)
     {
         rainbow(5);
-        strip.show();
     }
 
     if (!verifyAddress)
@@ -130,6 +129,7 @@ void dataReceived(int count)
         }
         else if (inputBuffer[0] == '4')
         {
+            Serial.println("aufeh");
             blink = false;
             update = true;
             for (int i = 0; i < MAX_PIXELS; i++)
