@@ -8,6 +8,9 @@
 #define BLINK LED_BUILTIN
 #define UPDATE A1
 
+// reset function
+void (*resetFunc)(void) = 0; // declare reset fuction at address 0
+
 volatile int address;
 volatile bool verifyAddress = true;
 volatile int requestMode = 0;
