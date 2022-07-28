@@ -132,7 +132,10 @@ void dataReceived(int count)
         {
             blink = false;
             update = true;
-            strip.clear();
+            for (int i = 0; i < MAX_PIXELS; i++)
+            {
+                strip.setPixelColor(i, 0);
+            }
             return;
         }
     }
