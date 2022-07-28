@@ -12,6 +12,7 @@ volatile int address;
 volatile bool verifyAddress = true;
 volatile int requestMode = 0;
 volatile bool blink = false;
+volatile bool clear = false;
 volatile bool update = false;
 volatile uint32_t headColor;
 volatile uint32_t tailColor;
@@ -61,6 +62,13 @@ void setup()
 
 void loop()
 {
+    if (clear)
+    {
+        strip.clear();
+        strip.show();
+        clear = false;
+    }
+
     if (blink)
     {
         rainbow(5);
@@ -129,13 +137,8 @@ void dataReceived(int count)
         }
         else if (inputBuffer[0] == '4')
         {
-            Serial.println("aufeh");
             blink = false;
-            update = true;
-            for (int i = 0; i < MAX_PIXELS; i++)
-            {
-                strip.setPixelColor(i, 0);
-            }
+            clear = true;
             return;
         }
     }
