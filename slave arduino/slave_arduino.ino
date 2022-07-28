@@ -1,4 +1,4 @@
-#include <ArduinoUniqueID.h>
+// #include <ArduinoUniqueID.h>
 #include <Adafruit_NeoPixel.h>
 #include <Arduino.h>
 #include "src/Wire/src/Wire.h" // local copy of Wire.h so we can override the buffer size limit
@@ -28,14 +28,9 @@ void setup()
 
     Serial.begin(115200);
 
-    // initialize randomness w/ unique ID
-    unsigned long x = 0;
-    for (int i = 0; i < UniqueIDsize; i++)
-    {
-        x <<= 8;
-        x |= UniqueID[i];
-    }
-    randomSeed(x);
+    // initialize randomness w/ analog read of pin A0
+    // instead of Unique ID, as it doesn't work for some reason
+    randomSeed(analogRead(0));
 
     // adds the rest of the random digits to the device id
     for (size_t i = 0; i < CHALLENGE_LEN; i++)
@@ -110,13 +105,15 @@ void dataReceived(int count)
     int size = Wire.available();
     char inputBuffer[size];
     int counter = 0;
-
+    Serial.print("Data recieved: ");
     while (Wire.available() > 0)
     {
         char c = Wire.read();
         inputBuffer[counter] = c;
         counter++;
     }
+    inputBuffer[counter] = '\0';
+    Serial.println(inputBuffer);
 
     if (size == 1)
     {
