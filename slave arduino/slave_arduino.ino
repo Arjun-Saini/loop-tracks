@@ -1,8 +1,7 @@
 #include <ArduinoUniqueID.h>
-#include <Wire.h>
-// #include <Adafruit_NeoPixel.h>
+#include <Adafruit_NeoPixel.h>
 #include <Arduino.h>
-// SYSTEM_MODE(MANUAL);
+#include "src/Wire/src/Wire.h" // local copy of Wire.h so we can override the buffer size limit
 
 #define MAX_PIXELS 100
 #define CHALLENGE_LEN 25 // 24 + 1 for null terminator
@@ -16,20 +15,16 @@ volatile bool blink = false;
 volatile bool update = false;
 volatile uint32_t headColor;
 volatile uint32_t tailColor;
-volatile char *trainBuffer;
-volatile int trainBufferSize;
 
 char challenge[CHALLENGE_LEN];
 
-// Adafruit_NeoPixel strip(MAX_PIXELS, 2, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip(MAX_PIXELS, 2, NEO_GRB + NEO_KHZ800);
 
-// void rainbow(uint8_t wait);
-// uint32_t Wheel(byte WheelPos);
+void rainbow(uint8_t wait);
+uint32_t Wheel(byte WheelPos);
 
 void setup()
 {
-    pinMode(BLINK, OUTPUT);  // for blinking
-    pinMode(UPDATE, OUTPUT); // for updating neopixels
 
     Serial.begin(115200);
 
@@ -64,25 +59,21 @@ void setup()
     Wire.onReceive(dataReceived);
     Wire.onRequest(dataRequest);
 
-    // strip.begin();
-    // strip.clear();
-    // strip.show();
+    strip.begin();
+    strip.clear();
+    strip.show();
 }
 
 void loop()
 {
     if (blink)
     {
-        digitalWrite(BLINK, HIGH);
-        delay(100);
-        digitalWrite(BLINK, LOW);
-        delay(100);
-        // rainbow(5);
-        // for (int i = 0; i < MAX_PIXELS; i++)
-        // {
-        //     strip.setPixelColor(i, 0);
-        // }
-        // strip.show();
+        rainbow(5);
+        for (int i = 0; i < MAX_PIXELS; i++)
+        {
+            strip.setPixelColor(i, 0);
+        }
+        strip.show();
     }
 
     if (!verifyAddress)
@@ -110,51 +101,22 @@ void loop()
     if (update)
     {
         update = false;
-        digitalWrite(UPDATE, HIGH);
-        delay(100);
-        digitalWrite(UPDATE, LOW);
-        delay(100);
-        // Serial.println("Updating neopixels");
-
-        // for (int i = 0; i < trainBufferSize + 1; i++)
-        // {
-        //     if (strip.getPixelColor(i) == headColor || strip.getPixelColor(i) == tailColor)
-        //     {
-        //         strip.setPixelColor(i, 0);
-        //     }
-        // }
-        // for (int i = 0; i < trainBufferSize; i++)
-        // {
-        //     if (trainBuffer[i] == '1')
-        //     {
-        //         strip.setPixelColor(i - 1, tailColor);
-        //         strip.setPixelColor(i, tailColor);
-        //         strip.setPixelColor(i + 1, headColor);
-        //     }
-        //     else if (trainBuffer[i] == '5')
-        //     {
-        //         strip.setPixelColor(i - 1, headColor);
-        //         strip.setPixelColor(i, tailColor);
-        //         strip.setPixelColor(i + 1, tailColor);
-        //     }
-        // }
-
-        // strip.show();
+        strip.show();
     }
 }
 
 void dataReceived(int count)
 {
-
     int size = Wire.available();
     char inputBuffer[size];
-    if (Wire.available() > 0)
-    {
-        Wire.readBytes(inputBuffer, size);
-    }
+    int counter = 0;
 
-    Serial.print(F("Received: "));
-    Serial.println(inputBuffer);
+    while (Wire.available() > 0)
+    {
+        char c = Wire.read();
+        inputBuffer[counter] = c;
+        counter++;
+    }
 
     if (size == 1)
     {
@@ -176,7 +138,7 @@ void dataReceived(int count)
         else if (inputBuffer[0] == '4')
         {
             blink = false;
-            // strip.clear();
+            strip.clear();
             return;
         }
     }
@@ -191,36 +153,48 @@ void dataReceived(int count)
             }
         }
     }
+    else if (size == 12)
+    {
+        char headBuffer[7];
+        char tailBuffer[7];
+        for (int i = 0; i < 6; i++)
+        {
+            headBuffer[i] = inputBuffer[i];
+            tailBuffer[i] = inputBuffer[i + 6];
+        }
+        headBuffer[6] = '\0';
+        tailBuffer[6] = '\0';
+        headColor = strtoul(headBuffer, NULL, 16);
+        tailColor = strtoul(tailBuffer, NULL, 16);
+        return;
+    }
     else
     {
+        for (int i = 0; i < size + 1; i++)
+        {
+            if (strip.getPixelColor(i) == headColor || strip.getPixelColor(i) == tailColor)
+            {
+                strip.setPixelColor(i, 0);
+            }
+        }
+        for (int i = 0; i < size; i++)
+        {
+            if (inputBuffer[i] == '1')
+            {
+                strip.setPixelColor(i - 1, tailColor);
+                strip.setPixelColor(i, tailColor);
+                strip.setPixelColor(i + 1, headColor);
+            }
+            else if (inputBuffer[i] == '5')
+            {
+                strip.setPixelColor(i - 1, headColor);
+                strip.setPixelColor(i, tailColor);
+                strip.setPixelColor(i + 1, tailColor);
+            }
+        }
         update = true;
+        return;
     }
-    // else if (size == 12)
-    // {
-    //     char headBuffer[7];
-    //     char tailBuffer[7];
-    //     for (int i = 0; i < 6; i++)
-    //     {
-    //         headBuffer[i] = inputBuffer[i];
-    //         tailBuffer[i] = inputBuffer[i + 6];
-    //     }
-    //     headBuffer[6] = '\0';
-    //     tailBuffer[6] = '\0';
-    //     headColor = strtoul(headBuffer, NULL, 16);
-    //     tailColor = strtoul(tailBuffer, NULL, 16);
-    //     return;
-    // }
-    // else
-    // {
-    //     trainBufferSize = size;
-    //     trainBuffer = new char[size];
-    //     for (int i = 0; i < size; i++)
-    //     {
-    //         trainBuffer[i] = inputBuffer[i];
-    //     }
-    //     update = true;
-    //     return;
-    // }
 }
 
 void dataRequest()
@@ -251,37 +225,37 @@ void dataRequest()
     }
 }
 
-// void rainbow(uint8_t wait)
-// {
-//     uint16_t i, j;
+void rainbow(uint8_t wait)
+{
+    uint16_t i, j;
 
-//     for (j = 0; j < 256; j++)
-//     {
-//         for (i = 0; i < strip.numPixels(); i++)
-//         {
-//             strip.setPixelColor(i, Wheel((i + j) & 255));
-//         }
-//         strip.show();
-//         delay(wait);
-//     }
-// }
+    for (j = 0; j < 256; j++)
+    {
+        for (i = 0; i < strip.numPixels(); i++)
+        {
+            strip.setPixelColor(i, Wheel((i + j) & 255));
+        }
+        strip.show();
+        delay(wait);
+    }
+}
 
-// // Input a value 0 to 255 to get a color value.
-// // The colours are a transition r - g - b - back to r.
-// uint32_t Wheel(byte WheelPos)
-// {
-//     if (WheelPos < 85)
-//     {
-//         return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
-//     }
-//     else if (WheelPos < 170)
-//     {
-//         WheelPos -= 85;
-//         return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
-//     }
-//     else
-//     {
-//         WheelPos -= 170;
-//         return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
-//     }
-// }
+// Input a value 0 to 255 to get a color value.
+// The colours are a transition r - g - b - back to r.
+uint32_t Wheel(byte WheelPos)
+{
+    if (WheelPos < 85)
+    {
+        return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+    }
+    else if (WheelPos < 170)
+    {
+        WheelPos -= 85;
+        return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+    }
+    else
+    {
+        WheelPos -= 170;
+        return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+    }
+}

@@ -23,17 +23,17 @@ SYSTEM_THREAD(ENABLED);
 /*
 all loop segment sizes must be the same
 brown line receives all loop data for cta
-no output segment can be 1, 12, or 24 pijels long, causes conflict with slave protocol
+no output segment can be 1, 12, or 24 pixels long, causes conflict with slave protocol
 */
 
 // Chinatown to North/Clybourn
 Railway redLineCTA = Railway(
-    // checkpoints in order starting at slave position, should be a checkpoint at each bend/turn, no 3 adjacent checkpoints can form an angle smaller than 90 degrees
+    // checkpoints in order starting at slave position, should be a checkpoint at each bend/turn, no 3 adxacent checkpoints can form an angle smaller than 90 degrees
     {Checkpoint(41.853028, -87.63109), Checkpoint(41.9041, -87.628921), Checkpoint(41.903888, -87.639506), Checkpoint(41.913732, -87.652380), Checkpoint(41.9253, -87.65286)},
-    {25, 3, 7, 5}, // pijels in between each checkpoint, should have 1 less element than checkpoint vector
+    {25, 3, 7, 5}, // pixels in between each checkpoint, should have 1 less element than checkpoint vector
     {0, 40, 0, 0}, // size of each output segment: before loop, after loop, in loop, in green
     "red",
-    {"ff0000", "0a0000"}, // hej color values for head and body/tail of the train
+    {"ff0000", "0a0000"}, // hex color values for head and body/tail of the train
     {0, 0, 0, 0}          // checkpoint bounds for lower loop, upper loop, lower green, upper green, these are only used for merging different rail colors onto one track
 );
 
@@ -111,7 +111,7 @@ Railway blueLineMBTA = Railway{
     {0, 0, 0, 0},
 };
 
-// Rojbury Crossing to Wellington
+// Roxbury Crossing to Wellington
 Railway orangeLineMBTA = Railway{
     {Checkpoint(42.331520, -71.095285), Checkpoint(42.347474, -71.076055), Checkpoint(42.346967, -71.064553), Checkpoint(42.357606, -71.057324), Checkpoint(42.377410, -71.075941), Checkpoint(42.403125, -71.077024)},
     {10, 5, 10, 10, 10},
@@ -155,7 +155,7 @@ int slaveCount;
 
 bool parseTrain(int trainIndex, Railway &currentRailway);
 void sendData(int thing, Railway currentRailway);
-void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, void *contejt);
+void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, void *context);
 void lightshow(int length);
 void callback(char *topic, byte *payload, unsigned int length);
 void alphaDisplay(Adafruit_AlphaNum4 display, String str);
@@ -226,11 +226,11 @@ void setup()
     pinkLineCTA.setLoopIndex(3, 7);
     ctaRailways = {brownLineCTA}; // {brownLineCTA, purpleLineCTA, greenLineCTA, orangeLineCTA, pinkLineCTA, redLineCTA, blueLineCTA};
 
-    // greenLine1 and greenLine2 must be in adjacent in the vector
+    // greenLine1 and greenLine2 must be in adxacent in the vector
     mbtaRailways = {redLineMBTA, greenLine1MBTA, greenLine2MBTA, blueLineMBTA, orangeLineMBTA};
 
-    // 1 slave per line, ejcept cta green which has 2 and cta purple which has 0 (7 for full cta)
-    // there needs to be the same number of rail lines and slaves ejpected
+    // 1 slave per line, except cta green which has 2 and cta purple which has 0 (7 for full cta)
+    // there needs to be the same number of rail lines and slaves expected
     cities = {City(ctaRailways, "cta", 1), City(mbtaRailways, "mbta", 5)};
 
     display1.begin(0x71);
@@ -251,17 +251,17 @@ void loop()
         Serial.println();
 
         cityIndexBuffer = cityIndex;
-        for (unsigned int j = 0; j < cities[cityIndexBuffer].railways.size(); j++)
+        for (unsigned int x = 0; x < cities[cityIndexBuffer].railways.size(); x++)
         {
 
-            // rainbow led on when close projimity
+            // rainbow led on when close proximity
             uint8_t range = vl.readRange();
 
             Serial.printlnf("range: %i", range);
 
             if (range <= 100)
             {
-                Serial.println("projimity");
+                Serial.println("proximity");
                 lightshow(1000);
                 return;
             }
@@ -282,8 +282,8 @@ void loop()
             {
                 return;
             }
-            // request.path = "/api/1.0/ttpositions.aspj?key=00ff09063caa46748434d5fa321d048f&rt=" + String(railways[j].name.c_str()) + "&outputType=JSON";
-            request.path = "/loop-tracks/" + String(cities[cityIndexBuffer].name.c_str()) + "?lines=" + String(cities[cityIndexBuffer].railways[j].name.c_str());
+            // request.path = "/api/1.0/ttpositions.aspx?key=00ff09063caa46748434d5fa321d048f&rt=" + String(railways[x].name.c_str()) + "&outputType=JSON";
+            request.path = "/loop-tracks/" + String(cities[cityIndexBuffer].name.c_str()) + "?lines=" + String(cities[cityIndexBuffer].railways[x].name.c_str());
             http.get(request, response, headers);
 
             Serial.println("parsing");
@@ -296,7 +296,7 @@ void loop()
             }
 
             int trainIndex = 0;
-            Railway currentRailway = cities[cityIndexBuffer].railways[j];
+            Railway currentRailway = cities[cityIndexBuffer].railways[x];
 
             // loop through each train, loop breaks when all trains have been parsed
             while (true)
@@ -308,7 +308,7 @@ void loop()
                 trainIndex++;
             }
 
-            sendData(j, currentRailway);
+            sendData(x, currentRailway);
         }
 
         Serial.println();
@@ -325,7 +325,7 @@ void sendData(int thing, Railway currentRailway)
     // each `i` is a different part of the train data? need to know - Ian
     for (int i = 0; i < 4; i++)
     {
-        // sends train color data to slave in preparation for the nejt set of train data
+        // sends train color data to slave in preparation for the next set of train data
         if (cityIndexBuffer == 0 && (i == 2 || currentRailway.name == purpleLineCTA.name))
         {
             Wire.beginTransmission(brownLineCTAAdr);
@@ -378,7 +378,7 @@ void sendData(int thing, Railway currentRailway)
                 // pads green line sending to loop
                 if (currentRailway.name == greenLineCTA.name)
                 {
-                    for (unsigned int j = 0; j < brownLineCTA.outputs[0].size() + (brownLineCTA.outputs[2].size() / 2); j++) // why brown line and not green line? - Ian
+                    for (unsigned int x = 0; x < brownLineCTA.outputs[0].size() + (brownLineCTA.outputs[2].size() / 2); x++) // why brown line and not green line? - Ian
                     {
                         Wire.write('0');
                     }
@@ -387,16 +387,16 @@ void sendData(int thing, Railway currentRailway)
                 // prevents brown/purple line from getting overriden
                 else if (currentRailway.name == brownLineCTA.name || currentRailway.name == purpleLineCTA.name)
                 {
-                    for (unsigned int j = 0; j < brownLineCTA.outputs[0].size(); j++)
+                    for (unsigned int x = 0; x < brownLineCTA.outputs[0].size(); x++)
                     {
-                        Wire.write((char)currentRailway.outputs[0][j] + '0');
+                        Wire.write((char)currentRailway.outputs[0][x] + '0');
                     }
                 }
 
                 // pads every other line sending to loop
                 else
                 {
-                    for (unsigned int j = 0; j < brownLineCTA.outputs[0].size(); j++)
+                    for (unsigned int x = 0; x < brownLineCTA.outputs[0].size(); x++)
                     {
                         Wire.write('0');
                     }
@@ -406,7 +406,7 @@ void sendData(int thing, Railway currentRailway)
             // pads blank loop onto the brown/purple track
             if (i == 1 && (currentRailway.name == brownLineCTA.name || currentRailway.name == purpleLineCTA.name))
             {
-                for (unsigned int j = 0; j < currentRailway.outputs[2].size(); j++)
+                for (unsigned int x = 0; x < currentRailway.outputs[2].size(); x++)
                 {
                     Wire.write('0');
                 }
@@ -415,14 +415,14 @@ void sendData(int thing, Railway currentRailway)
             // pad blank green segment onto orange and pink tracks
             if (i == 3 && currentRailway.name == orangeLineCTA.name)
             {
-                for (unsigned int j = 0; j < greenLineCTA.outputs[0].size() - orangeLineCTA.outputs[3].size(); j++)
+                for (unsigned int x = 0; x < greenLineCTA.outputs[0].size() - orangeLineCTA.outputs[3].size(); x++)
                 {
                     Wire.write('0');
                 }
             }
             else if (i == 3 && currentRailway.name == pinkLineCTA.name)
             {
-                for (unsigned int j = 0; j < greenLineCTA.outputs[0].size() - pinkLineCTA.outputs[3].size(); j++)
+                for (unsigned int x = 0; x < greenLineCTA.outputs[0].size() - pinkLineCTA.outputs[3].size(); x++)
                 {
                     Wire.write('0');
                 }
@@ -431,19 +431,19 @@ void sendData(int thing, Railway currentRailway)
 
         // sends train data to slave
         Serial.printf("%s rail part %i: ", currentRailway.name.c_str(), i);
-        for (unsigned int j = 0; j < currentRailway.outputs[i].size(); j++)
+        for (unsigned int x = 0; x < currentRailway.outputs[i].size(); x++)
         {
-            Wire.write((char)currentRailway.outputs[i][j] + '0');
-            Serial.print(currentRailway.outputs[i][j]);
+            Wire.write((char)currentRailway.outputs[i][x] + '0');
+            Serial.print(currentRailway.outputs[i][x]);
         }
         Serial.println();
-        Wire.endTransmission();
+        Wire.endTransmission(true);
     }
     for (int i = 0; i < 4; i++)
     {
-        for (unsigned int j = 0; j < currentRailway.outputs[j].size(); j++)
+        for (unsigned int x = 0; x < currentRailway.outputs[x].size(); x++)
         {
-            currentRailway.outputs[i][j] = 0;
+            currentRailway.outputs[i][x] = 0;
         }
     }
     Serial.println();
@@ -459,16 +459,16 @@ void sendData(int thing, Railway currentRailway)
  */
 bool parseTrain(int trainIndex, Railway &currentRailway)
 {
-    // parse json data returned from api
+    // parse xson data returned from api
     JsonReference train = parser.getReference().key("lines").index(0).key("trains").index(trainIndex);
-    String nejtStation = train.key("nejt_stop").valueString();
+    String nextStation = train.key("next_stop").valueString();
     String destNm = train.key("destination").valueString();
     int trainDir = train.key("direction").valueInt();
     float lat = train.key("latitude").valueFloat();
     float lon = train.key("longitude").valueFloat();
 
     // break loop once all trains have been parsed
-    if (nejtStation.length() <= 1)
+    if (nextStation.length() <= 1)
     {
         Serial.println("break");
         return true;
@@ -491,24 +491,24 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
     }
 
     // calculates which checkpoint is on the other side of the train from the nearest checkpoint, works when turns are 90 degrees or less
-    float j, j1, y, y1, slope, perpendicularSlope;
+    float x, x1, y, y1, slope, perpendicularSlope;
     int secondClosestIndex;
 
-    j = lat;
+    x = lat;
     y = lon;
-    j1 = currentCheckpoints[closestIndex].lat;
+    x1 = currentCheckpoints[closestIndex].lat;
     y1 = currentCheckpoints[closestIndex].lon;
 
     if (currentCheckpoints[closestIndex].lat > lat)
     {
-        slope = (y1 - y) / (j1 - j);
+        slope = (y1 - y) / (x1 - x);
     }
     else
     {
-        slope = (y - y1) / (j - j1);
+        slope = (y - y1) / (x - x1);
     }
 
-    // prevents division by zero or ejtremely large numbers
+    // prevents division by zero or extremely large numbers
     if (slope == 0)
     {
         perpendicularSlope = __FLT_MAX__ / 10;
@@ -528,11 +528,11 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
     // point slope formula to determine which checkpoint is on the other side of the train from the nearest checkpoint
     if (closestIndex == 0)
     {
-        pointSide = (perpendicularSlope * (currentCheckpoints[closestIndex + 1].lat - j) + y) > currentCheckpoints[closestIndex + 1].lon;
-        nearestSide = (perpendicularSlope * (currentCheckpoints[closestIndex].lat - j) + y) > currentCheckpoints[closestIndex].lon;
+        pointSide = (perpendicularSlope * (currentCheckpoints[closestIndex + 1].lat - x) + y) > currentCheckpoints[closestIndex + 1].lon;
+        nearestSide = (perpendicularSlope * (currentCheckpoints[closestIndex].lat - x) + y) > currentCheckpoints[closestIndex].lon;
         if (currentRailway.loopIndex == closestIndex)
         {
-            loopPointSide = (perpendicularSlope * (currentCheckpoints[currentRailway.tripleIndex - 1].lat - j) + y) > currentCheckpoints[currentRailway.tripleIndex - 1].lon;
+            loopPointSide = (perpendicularSlope * (currentCheckpoints[currentRailway.tripleIndex - 1].lat - x) + y) > currentCheckpoints[currentRailway.tripleIndex - 1].lon;
             if (nearestSide != pointSide)
             {
                 secondClosestIndex = 1;
@@ -562,13 +562,13 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
     }
     else
     {
-        pointSide = (perpendicularSlope * (currentCheckpoints[closestIndex - 1].lat - j) + y) > currentCheckpoints[closestIndex - 1].lon;
-        nearestSide = (perpendicularSlope * (currentCheckpoints[closestIndex].lat - j) + y) > currentCheckpoints[closestIndex].lon;
+        pointSide = (perpendicularSlope * (currentCheckpoints[closestIndex - 1].lat - x) + y) > currentCheckpoints[closestIndex - 1].lon;
+        nearestSide = (perpendicularSlope * (currentCheckpoints[closestIndex].lat - x) + y) > currentCheckpoints[closestIndex].lon;
         if (closestIndex == checkpointCount - 1)
         {
             if (closestIndex == currentRailway.loopIndex)
             {
-                loopPointSide = (perpendicularSlope * (currentCheckpoints[currentRailway.tripleIndex - 1].lat - j) + y) > currentCheckpoints[currentRailway.tripleIndex - 1].lon;
+                loopPointSide = (perpendicularSlope * (currentCheckpoints[currentRailway.tripleIndex - 1].lat - x) + y) > currentCheckpoints[currentRailway.tripleIndex - 1].lon;
                 if (nearestSide != pointSide)
                 {
                     secondClosestIndex = checkpointCount - 2;
@@ -664,12 +664,12 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
             segmentPos += currentRailway.scalers[i];
         }
 
-        // cta direction fijes
+        // cta direction fixes
         if (cityIndexBuffer == 0)
         {
             if (inLoop)
             {
-                // adjusts output array orientation to match brown line
+                // adxusts output array orientation to match brown line
                 if (currentRailway.name == pinkLineCTA.name)
                 {
                     segmentPos = (float)currentRailway.outputs[2].size() - segmentPos;
@@ -700,7 +700,7 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
                 trainDir = 6 - trainDir;
             }
         }
-        // mbta direction fijes
+        // mbta direction fixes
         else if (cityIndexBuffer == 1)
         {
             if (currentRailway.name == orangeLineMBTA.name || currentRailway.name == greenLine1MBTA.name || currentRailway.name == redLineMBTA.name)
@@ -747,7 +747,7 @@ void randomizeAddress()
 
                 String inputBuffer = "";
                 char c;
-                for (int j = 0; j < 24; j++)
+                for (int x = 0; x < 24; x++)
                 {
                     c = Wire.read();
                     inputBuffer += c;
@@ -766,7 +766,7 @@ void randomizeAddress()
                 Serial.println("request code 2, address: " + String(i));
                 Wire.requestFrom(i, 4);
                 inputBuffer = "";
-                for (int j = 0; j < 4; j++)
+                for (int x = 0; x < 4; x++)
                 {
                     inputBuffer += (char)Wire.read();
                 }
@@ -816,7 +816,7 @@ void randomizeAddress()
 }
 
 // Communication with app, configures city and rail colors.
-void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, void *contejt)
+void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, void *context)
 {
     txCharacteristic.setValue("ok");
     String inputBuffer = "";
@@ -945,7 +945,7 @@ void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, 
                 }
             }
 
-            // turn off led, turn nejt device led on
+            // turn off led, turn next device led on
             Wire.beginTransmission(addressArr[bleCount]);
             Wire.write('4');
             Wire.endTransmission();
