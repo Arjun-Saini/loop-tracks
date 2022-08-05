@@ -1,6 +1,7 @@
 // #include <ArduinoUniqueID.h>
 #include <Adafruit_NeoPixel.h>
 #include <Arduino.h>
+#include <avr/wdt.h>
 #include "src/Wire/src/Wire.h" // local copy of Wire.h so we can override the buffer size limit
 
 #define MAX_PIXELS 100
@@ -9,7 +10,13 @@
 #define UPDATE A1
 
 // reset function
-void (*resetFunc)(void) = 0; // declare reset fuction at address 0
+void rebootFunc()
+{
+    wdt_disable();
+    wdt_enable(WDTO_15MS);
+    while (1)
+        ;
+}
 
 volatile int address;
 volatile bool verifyAddress = true;
@@ -17,6 +24,7 @@ volatile int requestMode = 0;
 volatile bool blink = false;
 volatile bool clear = false;
 volatile bool refresh = false;
+volatile bool reboot = false;
 volatile uint32_t headColor;
 volatile uint32_t tailColor;
 
@@ -29,7 +37,6 @@ uint32_t Wheel(byte WheelPos);
 
 void setup()
 {
-
     Serial.begin(115200);
 
     // initialize randomness w/ analog read of pin A0
@@ -65,6 +72,12 @@ void setup()
 
 void loop()
 {
+    if (reboot)
+    {
+        reboot = false;
+        rebootFunc();
+    }
+
     if (clear)
     {
         strip.clear();
@@ -144,9 +157,9 @@ void dataReceived(int count)
             clear = true;
             return;
         }
-        else if (inputBuffer[0] == '5')
+        else if (inputBuffer[0] == '9') // Tell the device to reboot
         {
-            // do OTA updates here
+            reboot = true;
             return;
         }
     }
