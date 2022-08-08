@@ -1,4 +1,0 @@
-(fp_lib_table
-  (lib (name "Adafruit NeoPixel 8 Stick")(type "KiCad")(uri "$(KIPRJMOD)/Adafruit NeoPixel 8 Stick.pretty")(options "")(descr "")(disabled))
-  (lib (name "ATMEGA328P-PU")(type "KiCad")(uri "${KIPRJMOD}/ATMEGA328P-PU")(options "")(descr ""))
-)

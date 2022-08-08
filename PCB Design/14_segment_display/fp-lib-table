@@ -1,0 +1,3 @@
+(fp_lib_table
+  (lib (name "AlphaNumeric Featherwing rev A")(type "KiCad")(uri "$(KIPRJMOD)/14_segment_display.pretty")(options "")(descr ""))
+)

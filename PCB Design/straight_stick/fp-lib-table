@@ -1,0 +1,3 @@
+(fp_lib_table
+  (lib (name "Adafruit NeoPixel 8 Stick")(type "KiCad")(uri "$(KIPRJMOD)/straight_stick.pretty")(options "")(descr "")(disabled))
+)

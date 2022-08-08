@@ -1,0 +1,3 @@
+(fp_lib_table
+  (lib (name "Adafruit NeoPixel 8 Stick")(type "KiCad")(uri "$(KIPRJMOD)/45deg_right_turn.pretty")(options "")(descr "")(disabled))
+)
