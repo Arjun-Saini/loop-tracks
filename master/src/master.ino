@@ -213,21 +213,21 @@ void setup()
     orangeLineCTA.setLoopIndex(3, 7);
     purpleLineCTA.setLoopIndex(2, 6);
     pinkLineCTA.setLoopIndex(3, 7);
-    ctaRailways = {blueLineCTA}; // {brownLineCTA, purpleLineCTA, greenLineCTA, orangeLineCTA, pinkLineCTA, redLineCTA, blueLineCTA};
+    ctaRailways = {blueLineCTA, redLineCTA, brownLineCTA, greenLineCTA, orangeLineCTA, pinkLineCTA, purpleLineCTA}; // {brownLineCTA, purpleLineCTA, greenLineCTA, orangeLineCTA, pinkLineCTA, redLineCTA, blueLineCTA};
 
     // greenLine1 and greenLine2 must be in adxacent in the vector
     mbtaRailways = {redLineMBTA, greenLine1MBTA, greenLine2MBTA, blueLineMBTA, orangeLineMBTA};
 
     // 1 slave per line, except cta green which has 2 and cta purple which has 0 (7 for full cta)
     // there needs to be the same number of rail lines and slaves expected
-    cities = {City(ctaRailways, "cta", 1), City(mbtaRailways, "mbta", 5)};
+    cities = {City(ctaRailways, "cta", 7), City(mbtaRailways, "mbta", 5)};
 
     display1.begin(0x71);
 }
 
 void loop()
 {
-    if (WiFi.isReady() && userInput)
+    if (WiFi.hasCredentials() && userInput)
     {
         Serial.println("loop start");
 
