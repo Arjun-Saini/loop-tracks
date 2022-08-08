@@ -9,15 +9,6 @@
 #define BLINK LED_BUILTIN
 #define UPDATE A1
 
-// reset function
-void rebootFunc()
-{
-    wdt_disable();
-    wdt_enable(WDTO_15MS);
-    while (1)
-        ;
-}
-
 volatile int address;
 volatile bool verifyAddress = true;
 volatile int requestMode = 0;
@@ -34,6 +25,7 @@ Adafruit_NeoPixel strip(MAX_PIXELS, 2, NEO_GRB + NEO_KHZ800);
 
 void rainbow(uint8_t wait);
 uint32_t Wheel(byte WheelPos);
+void(* resetFunc) (void) = 0;
 
 void setup()
 {
@@ -75,7 +67,7 @@ void loop()
     if (reboot)
     {
         reboot = false;
-        rebootFunc();
+        resetFunc();
     }
 
     if (clear)
