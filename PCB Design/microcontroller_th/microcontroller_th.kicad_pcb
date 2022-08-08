@@ -70,7 +70,7 @@
       (mirror false)
       (drillshape 0)
       (scaleselection 1)
-      (outputdirectory "/Users/admin/Git/loop-tracks/PCB Design/microcontroller - TH/gerber/")
+      (outputdirectory "gerber/")
     )
   )
 
