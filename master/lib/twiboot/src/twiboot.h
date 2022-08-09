@@ -6,6 +6,10 @@
 
 #include "crc.h"
 
+// TODO: support other Atmel devicess
+
+#define PAGE_SIZE 128 // TODO: make this configurable
+
 class Twiboot
 {
 public:
@@ -48,21 +52,59 @@ public:
     void GetChipInfo(uint64_t *signature, uint8_t *pageSize, uint16_t *flashSize, uint16_t *eepromSize);
 
     /**
+     * Reads a single flash page from the chip.
+     *
+     * @param page The page to read (zero-indexed).
+     * @param buf The buffer to store the page in (at least 128 bytes).
+     */
+    void ReadFlashPage(uint16_t page, uint8_t *buf);
+
+    // TODO: implement these:
+    // /**
+    //  * Reads a single EEPROM byte from the chip
+    //  *
+    //  * @param addr The address to start reading from.
+    //  */
+    // uint8_t ReadEEPROMByte(uint16_t addr);
+
+    // /**
+    //  * Writes 0 < len < page size bytes at once
+    //  *
+    //  * @param addr The address to start writeing from.
+    //  * @param buf The buffer to read from.
+    //  * @param len The number of bytes to write.
+    //  */
+    // uint8_t WriteEEPROMBytes(uint16_t addr, uint8_t *buf, uint8_t len);
+
+    /**
+     * DEPRECIATED: Use WriteFlash instead
+     *
      * Flashes a buffer of data to the device
      *
      * @param buf The data to write.
      * @param len The length of the buffer
      */
-    void Flash(uint8_t *buf, int len);
+    inline void Flash(uint8_t *buf, int len) { WriteFlash(buf, len); }
+
+    /**
+     * Flashes a buffer of data to the device.
+     * Starts at address of page and writes to the page at the length provided.
+     *
+     * @param page The page to write to (zero-indexed).
+     * @param buf The data to write.
+     * @param len The length of the buffer
+     */
+    void WriteFlash(uint8_t *buf, int len, uint16_t page = 0);
 
     /**
      * Verifies that the device contains the same data as the buffer.
      * Uses the CRC16 standard to verify the data.
+     * Starts at address 0x0000 and reads until the length provided.
      *
      * @param buf The data to verify that the device contains.
      * @param len The length of the data.
      */
-    bool Verify(uint8_t *buf, int len);
+    bool Verify(uint8_t *buf, int len, uint16_t page = 0);
 
     /**
      * Starts the main (non-bootloader) application on the device. Automatically

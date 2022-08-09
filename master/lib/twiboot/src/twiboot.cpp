@@ -12,13 +12,13 @@ inline void startWire()
 
 int numPagesInLen(int len)
 {
-    if (len % 128 == 0)
+    if (len % PAGE_SIZE == 0)
     {
-        return len / 128;
+        return len / PAGE_SIZE;
     }
     else
     {
-        return (len / 128) + 1;
+        return (len / PAGE_SIZE) + 1;
     }
 }
 
@@ -80,7 +80,52 @@ void Twiboot::GetChipInfo(uint64_t *signature, uint8_t *pageSize, uint16_t *flas
     *eepromSize |= Wire.read();
 }
 
-void Twiboot::Flash(uint8_t *buf, int len)
+void Twiboot::ReadFlashPage(uint16_t page, uint8_t *buf)
+{
+    startWire();
+    Wire.beginTransmission(addr);
+    Wire.write(0x02);
+    Wire.write(0x01);
+    Wire.write((page * PAGE_SIZE) >> 8 & 0xFF);
+    Wire.write((page * PAGE_SIZE) & 0xFF);
+    Wire.endTransmission();
+    Wire.requestFrom(addr, PAGE_SIZE);
+
+    for (int i = 0; i < PAGE_SIZE; i++)
+    {
+        buf[i] = Wire.read();
+    }
+}
+
+// uint8_t Twiboot::ReadEEPROMByte(uint16_t addr)
+// {
+//     startWire();
+//     Wire.beginTransmission(addr);
+//     Wire.write(0x02);
+//     Wire.write(0x02);
+//     Wire.write((addr >> 8) & 0xFF);
+//     Wire.write(addr & 0xFF);
+//     Wire.endTransmission();
+//     Wire.requestFrom(addr, 1);
+
+//     return Wire.read();
+// }
+
+// uint8_t Twiboot::WriteEEPROMBytes(uint16_t addr, uint8_t *buf, uint8_t len)
+// {
+//     startWire();
+//     Wire.beginTransmission(addr);
+//     Wire.write(0x02);
+//     Wire.write(0x02);
+//     Wire.write(addr >> 8 & 0xFF);
+//     Wire.write(addr & 0xFF);
+//     Wire.write(buf, len);
+//     return Wire.endTransmission();
+
+//     delay(21); // wait for the flash to finish
+// }
+
+void Twiboot::WriteFlash(uint8_t *buf, int len, uint16_t page)
 {
     startWire();
 
@@ -91,58 +136,51 @@ void Twiboot::Flash(uint8_t *buf, int len)
         Wire.beginTransmission(addr);
         Wire.write(0x02);
         Wire.write(0x01);
-        Wire.write((i * 128) >> 8 & 0xFF);
-        Wire.write((i * 128) & 0xFF);
+        Wire.write(((i + page) * PAGE_SIZE) >> 8 & 0xFF);
+        Wire.write(((i + page) * PAGE_SIZE) & 0xFF);
 
-        for (int j = i * 128; j < (i + 1) * 128; j++)
+        for (int j = i * PAGE_SIZE; j < (i + 1) * PAGE_SIZE; j++)
         {
-            if ((i == numPages - 1) && ((len % 128) != 0) && j >= len)
+            if ((i == numPages - 1) && ((len % PAGE_SIZE) != 0) && j >= len)
             {
                 Wire.write(0xFF);
             }
-            // else if ((i == numPages - 1) && ((len % 128) != 0))
-            // {
-            //     break;
-            // }
             else
             {
                 Wire.write(buf[j]);
-                //Serial.println(buf[j], HEX);
             }
         }
-        //Serial.printlnf("flashing page: %i", i);
 
         Wire.endTransmission();
 
-        delay(21);
+        delay(21); // wait for the flash to finish
     }
 }
 
-bool Twiboot::Verify(uint8_t *buf, int len)
+bool Twiboot::Verify(uint8_t *buf, int len, uint16_t page)
 {
     crcInit(); // has to be called before crcFast() to update the CRC tables
 
     for (int i = 0; i < numPagesInLen(len); i++)
     {
-
-        uint8_t read[128];
-        uint8_t tbuf[128];
+        uint8_t read[PAGE_SIZE];
+        uint8_t tbuf[PAGE_SIZE];
         startWire();
         Wire.beginTransmission(addr);
         Wire.write(0x02);
         Wire.write(0x01);
-        Wire.write((i * 128) >> 8 & 0xFF);
-        Wire.write((i * 128) & 0xFF);
+        Wire.write(((i + page) * PAGE_SIZE) >> 8 & 0xFF);
+        Wire.write(((i + page) * PAGE_SIZE) & 0xFF);
         Wire.endTransmission();
-        Wire.requestFrom(addr, 128);
+        Wire.requestFrom(addr, PAGE_SIZE);
 
-        for (int j = 0; j < 128; j++)
+        for (int j = 0; j < PAGE_SIZE; j++)
         {
 
             while (!Wire.available())
                 ;
 
-            if ((i * 128 + j) > len - 1)
+            if ((i * PAGE_SIZE + j) >= len)
             {
                 read[j] = 0xFF;
                 tbuf[j] = 0xFF;
@@ -150,11 +188,11 @@ bool Twiboot::Verify(uint8_t *buf, int len)
             else
             {
                 read[j] = Wire.read();
-                tbuf[j] = buf[i * 128 + j];
+                tbuf[j] = buf[i * PAGE_SIZE + j];
             }
         }
 
-        if (crcFast(read, 128) != crcFast(tbuf, 128))
+        if (crcFast(read, PAGE_SIZE) != crcFast(tbuf, PAGE_SIZE))
         {
             return false;
         }

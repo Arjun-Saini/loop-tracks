@@ -744,7 +744,8 @@ Railway blueLineCTA = Railway(
     {0, 60, 0, 0},
     "blue",
     {"0000ff", "00000a"},
-    {0, 0, 0, 0});
+    {0, 0, 0, 0}
+);
 
 // Sedgewick to Loop
 Railway brownLineCTA = Railway(
@@ -753,7 +754,8 @@ Railway brownLineCTA = Railway(
     {20, 0, 40, 0},
     "brown",
     {"ffff00", "0a0a00"},
-    {2, 6, 0, 0});
+    {2, 6, 0, 0}
+);
 
 // Cermak-McCormick to Kedzie
 Railway greenLineCTA = Railway(
@@ -762,7 +764,8 @@ Railway greenLineCTA = Railway(
     {15, 15, 20, 0},
     "green",
     {"00ff00", "000a00"},
-    {1, 3, 0, 0});
+    {1, 3, 0, 0}
+);
 
 // Halsted to Loop
 Railway orangeLineCTA = Railway(
@@ -771,7 +774,8 @@ Railway orangeLineCTA = Railway(
     {12, 0, 40, 8},
     "orange",
     {"ff8000", "0a0500"},
-    {3, 7, 1, 3});
+    {3, 7, 1, 3}
+);
 
 // Sedgewick to Loop
 Railway purpleLineCTA = Railway(
@@ -780,7 +784,8 @@ Railway purpleLineCTA = Railway(
     {20, 0, 40, 0},
     "purple",
     {"2000ff", "02000a"},
-    {2, 6, 0, 0});
+    {2, 6, 0, 0}
+);
 
 // Kedzie to Loop
 Railway pinkLineCTA = Railway(
@@ -789,7 +794,8 @@ Railway pinkLineCTA = Railway(
     {14, 0, 40, 6},
     "pink",
     {"ff8080", "0a0505"},
-    {3, 7, 2, 3});
+    {3, 7, 2, 3}
+);
 
 /// JFK/UMass to Harvard
 Railway redLineMBTA = Railway{
@@ -798,7 +804,7 @@ Railway redLineMBTA = Railway{
     {0, 50, 0, 0},
     "red",
     {"ff0000", "0a0000"},
-    {0, 0, 0, 0},
+    {0, 0, 0, 0}
 };
 
 // Wood Island to Bowdoin
@@ -808,7 +814,7 @@ Railway blueLineMBTA = Railway{
     {0, 40, 0, 0},
     "blue",
     {"0000ff", "00000a"},
-    {0, 0, 0, 0},
+    {0, 0, 0, 0}
 };
 
 // Roxbury Crossing to Wellington
@@ -818,7 +824,7 @@ Railway orangeLineMBTA = Railway{
     {0, 45, 0, 0},
     "orange",
     {"ff8000", "0a0500"},
-    {0, 0, 0, 0},
+    {0, 0, 0, 0}
 };
 
 // Kenmore to Union Square
@@ -828,7 +834,7 @@ Railway greenLine1MBTA = Railway{
     {0, 70, 0, 0},
     "green",
     {"00ff00", "000a00"},
-    {0, 0, 0, 0},
+    {0, 0, 0, 0}
 };
 
 // Longwood Medical Center to Back Bay(merges with green1)
@@ -838,7 +844,7 @@ Railway greenLine2MBTA = Railway{
     {0, 15, 0, 0},
     "green",
     {"00ff00", "000a00"},
-    {0, 0, 0, 0},
+    {0, 0, 0, 0}
 };
 
 std::vector<City> cities;
@@ -1023,6 +1029,7 @@ void loop()
         Serial.println();
     }
 }
+
 /**
  * Sends the data to the slaves
  * @param thing what is this? - Ian
@@ -1756,7 +1763,7 @@ void flashProg(unsigned char* _prog, unsigned int _len){
 
         Twiboot twiboot(0x30);
         while(!verify){
-             // wait for the bootloader to properly initialize
+            // wait for the bootloader to properly initialize
             while (!twiboot.AbortBootTimeout()){};
 
             Serial.println("Bootloader initialized!");
@@ -1785,7 +1792,7 @@ void flashProg(unsigned char* _prog, unsigned int _len){
 
             Serial.println("Flashing...");
 
-            twiboot.Flash(_prog, _len); // flash the program
+            twiboot.WriteFlash(_prog, _len); // flash the program
 
             Serial.println("Flashed!");
 
