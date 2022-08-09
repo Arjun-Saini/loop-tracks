@@ -10,12 +10,14 @@
 #define UPDATE A1
 
 volatile int address;
+volatile int adr;
 volatile bool verifyAddress = true;
 volatile int requestMode = 0;
 volatile bool blink = false;
 volatile bool clear = false;
 volatile bool refresh = false;
 volatile bool reboot = false;
+volatile bool flashAdr = false;
 volatile uint32_t headColor;
 volatile uint32_t tailColor;
 
@@ -43,14 +45,14 @@ void setup()
 
     challenge[CHALLENGE_LEN - 1] = '\0';
 
-    // seeds with the device id
-    address = random(0x00, 0x69);
+    // address = random(0x09, 0x69);
 
-    // address 41 is for VL6180
-    while (address == 0x29)
-    {
-        address = random(0x00, 0x69);
-    }
+    // // address 41 is for VL6180
+    // while (address == 0x29 || address == 0x30)
+    // {
+    //     address = random(0x09, 0x69);
+    // }
+    address = 0x08;
 
     Wire.setClock(400000);
     Wire.begin(address);
@@ -60,16 +62,11 @@ void setup()
     strip.begin();
     strip.clear();
     strip.show();
+    pinMode(6, INPUT);
 }
 
 void loop()
 {
-    if (reboot)
-    {
-        reboot = false;
-        resetFunc();
-    }
-
     if (clear)
     {
         strip.clear();
@@ -86,11 +83,14 @@ void loop()
     {
         Serial.print(F("randomize address: "));
         Serial.println(address);
-        address = random(0x00, 0x69);
+        address = random(0x09, 0x69);
 
-        while (address == 0x29)
+        while (address == 0x29 || address == 0x30)
         {
-            address = random(0x00, 0x69);
+            address = random(0x09, 0x69);
+        }
+        {
+            address = random(0x09, 0x69);
         }
 
         Serial.println(address);
@@ -108,6 +108,15 @@ void loop()
     {
         refresh = false;
         strip.show();
+    }
+
+    if (flashAdr){
+        Wire.end();
+        Wire.setClock(400000);
+        Wire.begin(adr);
+        Wire.onReceive(dataReceived);
+        Wire.onRequest(dataRequest);
+        flashAdr = false;
     }
 }
 
@@ -151,8 +160,7 @@ void dataReceived(int count)
         }
         else if (inputBuffer[0] == '9') // Tell the device to reboot
         {
-            reboot = true;
-            return;
+            pinMode(6, OUTPUT);
         }
     }
     else if (size == 24)
@@ -180,6 +188,9 @@ void dataReceived(int count)
         headColor = strtoul(headBuffer, NULL, 16);
         tailColor = strtoul(tailBuffer, NULL, 16);
         return;
+    }else if(size == 2){
+        adr = (int)inputBuffer[0];
+        flashAdr = true;
     }
     else
     {
@@ -215,26 +226,31 @@ void dataRequest()
     // Serial.println("request received");
     switch (requestMode)
     {
-    case 1:
-    {
-        // Serial.println("request mode 1");
-        Wire.write(challenge);
-        break;
-    }
-    case 2:
-    {
-        // Serial.println("request mode 2");
-        // Serial.println((unsigned long)UniqueID);
-        if (verifyAddress)
+        case 1:
         {
-            Wire.write("pass");
+            // Serial.println("request mode 1");
+            Wire.write(challenge);
+            break;
         }
-        else
+        case 2:
         {
-            Wire.write("fail");
+            // Serial.println("request mode 2");
+            // Serial.println((unsigned long)UniqueID);
+            if (verifyAddress)
+            {
+                Wire.write("pass");
+            }
+            else
+            {
+                Wire.write("fail");
+            }
+            break;
         }
-        break;
-    }
+        default:
+        {
+            Wire.write(0);
+            break;
+        }
     }
 }
 

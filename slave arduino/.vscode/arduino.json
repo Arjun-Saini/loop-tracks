@@ -2,6 +2,6 @@
     "sketch": "slave_arduino.ino",
     "output": "build",
     "board": "arduino:avr:uno",
-    "programmer": "arduino:arduinoasispatmega32u4",
-    "port": "/dev/tty.usbserial-14630"
+    "programmer": "arduino:avrisp",
+    "port": "/dev/tty.usbmodem144201"
 }

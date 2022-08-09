@@ -1,1 +1,1 @@
-#define BUFFER_SIZE 100 // define global buffer size
+#define BUFFER_SIZE 256 // define global buffer size
