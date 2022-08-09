@@ -20,7 +20,7 @@ SYSTEM_THREAD(ENABLED);
 #include "Adafruit_LEDBackpack_RK.h"
 #include "twiboot.h"
 
-#define UPDATE_INTERVAL 10 //seconds between program flashes
+#define UPDATE_INTERVAL 604800 //seconds between program flashes
 
 //use hexed.it to generate code snippet, upload arduino sketch hex file WITHOUT bootloader
 unsigned char slaveCode[8436] = {
