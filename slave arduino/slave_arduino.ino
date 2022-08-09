@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <avr/wdt.h>
 #include "src/Wire/src/Wire.h" // local copy of Wire.h so we can override the buffer size limit
+#include <EEPROM.h>
 
 #define MAX_PIXELS 100
 #define CHALLENGE_LEN 25 // 24 + 1 for null terminator
@@ -10,14 +11,12 @@
 #define UPDATE A1
 
 volatile int address;
-volatile int adr;
 volatile bool verifyAddress = true;
 volatile int requestMode = 0;
 volatile bool blink = false;
 volatile bool clear = false;
 volatile bool refresh = false;
 volatile bool reboot = false;
-volatile bool flashAdr = false;
 volatile uint32_t headColor;
 volatile uint32_t tailColor;
 
@@ -45,14 +44,20 @@ void setup()
 
     challenge[CHALLENGE_LEN - 1] = '\0';
 
-    // address = random(0x09, 0x69);
+    address = random(0x08, 0x69);
 
-    // // address 41 is for VL6180
-    // while (address == 0x29 || address == 0x30)
-    // {
-    //     address = random(0x09, 0x69);
-    // }
-    address = 0x08;
+    // address 41 is for VL6180
+    while (address == 0x29 || address == 0x30)
+    {
+        address = random(0x08, 0x69);
+    }
+    if(EEPROM.read(0) == 255){
+        EEPROM.write(0, address);
+    }else{
+        address = EEPROM.read(0);
+    }
+
+    // address = 0x08;
 
     Wire.setClock(400000);
     Wire.begin(address);
@@ -83,15 +88,13 @@ void loop()
     {
         Serial.print(F("randomize address: "));
         Serial.println(address);
-        address = random(0x09, 0x69);
+        address = random(0x08, 0x69);
 
         while (address == 0x29 || address == 0x30)
         {
-            address = random(0x09, 0x69);
+            address = random(0x08, 0x69);
         }
-        {
-            address = random(0x09, 0x69);
-        }
+        EEPROM.write(0, address);
 
         Serial.println(address);
 
@@ -108,15 +111,6 @@ void loop()
     {
         refresh = false;
         strip.show();
-    }
-
-    if (flashAdr){
-        Wire.end();
-        Wire.setClock(400000);
-        Wire.begin(adr);
-        Wire.onReceive(dataReceived);
-        Wire.onRequest(dataRequest);
-        flashAdr = false;
     }
 }
 
@@ -188,9 +182,6 @@ void dataReceived(int count)
         headColor = strtoul(headBuffer, NULL, 16);
         tailColor = strtoul(tailBuffer, NULL, 16);
         return;
-    }else if(size == 2){
-        adr = (int)inputBuffer[0];
-        flashAdr = true;
     }
     else
     {
