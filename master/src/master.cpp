@@ -943,15 +943,15 @@ void setup()
     orangeLineCTA.setLoopIndex(3, 7);
     purpleLineCTA.setLoopIndex(2, 6);
     pinkLineCTA.setLoopIndex(3, 7);
-    ctaRailways = {blueLineCTA};
-    //, redLineCTA, brownLineCTA, greenLineCTA, orangeLineCTA, pinkLineCTA, purpleLineCTA};
+    ctaRailways = {blueLineCTA, redLineCTA};
+    //, brownLineCTA, greenLineCTA, orangeLineCTA, pinkLineCTA, purpleLineCTA};
 
     // greenLine1 and greenLine2 must be in adxacent in the vector
     mbtaRailways = {redLineMBTA, greenLine1MBTA, greenLine2MBTA, blueLineMBTA, orangeLineMBTA};
 
     // 1 slave per line, except cta green which has 2 and cta purple which has 0 (7 for full cta)
     // there needs to be the same number of rail lines and slaves expected
-    cities = {City(ctaRailways, "cta", 1), City(mbtaRailways, "mbta", 5)};
+    cities = {City(ctaRailways, "cta", 2), City(mbtaRailways, "mbta", 5)};
 
     display1.begin(0x71);
 }
@@ -1765,8 +1765,9 @@ void alphaDisplay(Adafruit_AlphaNum4 display, String str)
 // Flashes program to all slaves
 void flashProg(unsigned char* _prog, unsigned int _len){
     Serial.println("flash start");
-    bool verify = false;
     for(int i : addressArr){
+        bool verify = false;
+        Serial.printlnf("flashing %i", i);
         Wire.beginTransmission(i);
         Wire.write('9');
         Wire.endTransmission();
