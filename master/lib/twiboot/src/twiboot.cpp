@@ -159,8 +159,6 @@ void Twiboot::WriteFlash(uint8_t *buf, int len, uint16_t page)
 
 bool Twiboot::Verify(uint8_t *buf, int len, uint16_t page)
 {
-    crcInit(); // has to be called before crcFast() to update the CRC tables
-
     for (int i = 0; i < numPagesInLen(len); i++)
     {
         uint8_t read[PAGE_SIZE];

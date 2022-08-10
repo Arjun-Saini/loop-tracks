@@ -46,7 +46,7 @@ void setup()
 
     address = random(0x08, 0x69);
 
-    // address 41 is for VL6180
+    // address 48 is for VL6180
     while (address == 0x29 || address == 0x30)
     {
         address = random(0x08, 0x69);
