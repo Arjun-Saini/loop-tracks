@@ -133,6 +133,7 @@ void Adafruit_VL6180X::loadSettings(void) {
                                 // to 500ms
     write8(0x0014, 0x24);       // Configures interrupt on 'New Sample
                                 // Ready threshold event'
+    write8(0x212, 0x30);        // Sets I2C device address to 0x30
 }
 
 

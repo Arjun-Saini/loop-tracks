@@ -133,7 +133,16 @@ crc crcSlow(unsigned char const message[], int nBytes)
 
 } /* crcSlow() */
 
-crc crcTable[256];
+#ifdef CRC_TABLE_VALUES
+
+crc crcTable[CRC_TABLE_SIZE] = CRC_TABLE_VALUES;
+
+#else
+
+crc crcTable[CRC_TABLE_SIZE];
+#warning "You need to use crcInit to initialize the crcTable"
+
+#endif
 
 /*********************************************************************
  *

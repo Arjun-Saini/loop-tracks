@@ -7,6 +7,7 @@
 void setup();
 void loop();
 void randomizeAddress();
+void flashProg(unsigned char* _prog, unsigned int _len, int _addr);
 #line 1 "/Users/sainihome/Documents/GitHub/loop-tracks/master/src/master.ino"
 SYSTEM_MODE(MANUAL);
 SYSTEM_THREAD(ENABLED);
@@ -21,6 +22,8 @@ SYSTEM_THREAD(ENABLED);
 #include "twiboot.h"
 
 #define UPDATE_INTERVAL 604800 //seconds between program flashes
+#define DEFAULT_SLAVE_ADR 0x29
+#define VL6180X_ADR 0x30
 
 //use hexed.it to generate code snippet, upload arduino sketch hex file WITHOUT bootloader
 unsigned char slaveCode[8436] = {
@@ -875,7 +878,7 @@ void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, 
 void lightshow(int length);
 void callback(char *topic, byte *payload, unsigned int length);
 void alphaDisplay(Adafruit_AlphaNum4 display, String str);
-void flashProg(unsigned char* _prog, unsigned int _len);
+void flashProg(unsigned char* _prog, unsigned int _len, int _adr);
 
 // const BleUuid serviceUuid("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
 // const BleUuid rxUuid("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
@@ -954,14 +957,22 @@ void setup()
     cities = {City(ctaRailways, "cta", 1), City(mbtaRailways, "mbta", 5)};
 
     display1.begin(0x71);
+
+    //flashes slave code to every address
+    for(int i = 0x08; i <= 0x69; i++){
+        flashProg(slaveCode, sizeof(slaveCode), i);
+    }
 }
 
 void loop()
 {
     if (WiFi.hasCredentials() && userInput)
     {
+        //re-flashes slave code to all slave addresses
         if(Time.now() - lastTime > UPDATE_INTERVAL){
-            flashProg(slaveCode, sizeof(slaveCode));
+            for(int i : addressArr){
+                flashProg(slaveCode, sizeof(slaveCode), i);
+            }
             lastTime = Time.now();
         }
 
@@ -1456,7 +1467,7 @@ void randomizeAddress()
         for (int i = 8; i <= 111; i++)
         {
             i2cRequestCount++;
-            if (i == 41)
+            if (i == VL6180X_ADR)
             {
                 continue;
             }
@@ -1515,7 +1526,7 @@ void randomizeAddress()
     int count = 0;
     for (int i = 8; i <= 111; i++)
     {
-        if (i == 41)
+        if (i == VL6180X_ADR)
         {
             continue;
         }
@@ -1762,63 +1773,76 @@ void alphaDisplay(Adafruit_AlphaNum4 display, String str)
     display.writeDisplay();
 }
 
-// Flashes program to all slaves
-void flashProg(unsigned char* _prog, unsigned int _len){
-    Serial.println("flash start");
+// Flashes program to designed i2c address
+void flashProg(unsigned char* _prog, unsigned int _len, int _addr){
+    if(_addr == VL6180X_ADR || _addr == DEFAULT_SLAVE_ADR){
+        return;
+    }
+
+    Wire.requestFrom(_addr, 1);
+    if(Wire.available() > 0){
+        Serial.println("device found, starting flash");
+    }else{
+        return;
+    }
+    Wire.read();
+
     bool verify = false;
-    for(int i : addressArr){
-        Wire.beginTransmission(i);
-        Wire.write('9');
-        Wire.endTransmission();
+    Serial.printlnf("flashing %i", _addr);
+    Wire.beginTransmission(_addr);
+    Wire.write('9');
+    Wire.endTransmission();
 
-        Twiboot twiboot(0x30);
-        while(!verify){
-            // wait for the bootloader to properly initialize
-            while (!twiboot.AbortBootTimeout()){};
+    Twiboot twiboot(DEFAULT_SLAVE_ADR);
+    while(!verify){
+        // wait for the bootloader to properly initialize
+        while (!twiboot.AbortBootTimeout()){};
 
-            Serial.println("Bootloader initialized!");
+        Serial.println("Bootloader initialized!");
 
-            char btldr_ver[16];
-            twiboot.GetBootloaderVersion(btldr_ver);
-            Serial.print("Bootloader version: ");
-            Serial.println(btldr_ver);
+        char btldr_ver[16];
+        twiboot.GetBootloaderVersion(btldr_ver);
+        Serial.print("Bootloader version: ");
+        Serial.println(btldr_ver);
 
-            // Get chip information
-            uint64_t signature;
-            uint8_t pageSize;
-            uint16_t flashSize;
-            uint16_t eepromSize;
+        // Get chip information
+        uint64_t signature;
+        uint8_t pageSize;
+        uint16_t flashSize;
+        uint16_t eepromSize;
 
-            twiboot.GetChipInfo(&signature, &pageSize, &flashSize, &eepromSize);
+        twiboot.GetChipInfo(&signature, &pageSize, &flashSize, &eepromSize);
 
-            Serial.print("Signature: ");
-            Serial.println(signature, HEX);
-            Serial.print("Page size: ");
-            Serial.println(pageSize);
-            Serial.print("Flash size: ");
-            Serial.println(flashSize);
-            Serial.print("EEPROM size: ");
-            Serial.println(eepromSize);
+        Serial.print("Signature: ");
+        Serial.println(signature, HEX);
+        Serial.print("Page size: ");
+        Serial.println(pageSize);
+        Serial.print("Flash size: ");
+        Serial.println(flashSize);
+        Serial.print("EEPROM size: ");
+        Serial.println(eepromSize);
 
-            Serial.println("Flashing...");
+        Serial.println("Flashing...");
 
-            twiboot.WriteFlash(_prog, _len); // flash the program
+        twiboot.WriteFlash(_prog, _len); // flash the program
 
-            Serial.println("Flashed!");
+        Serial.println("Flashed!");
 
-            Serial.println("Verifying...");
-            if (twiboot.Verify(_prog, _len)) // verify the program
-            {
-                verify = true;
-                Serial.println("Verified!");
-                Serial.println("All done, going to the app now!");
-                twiboot.JumpToApp();
-            }
-            else
-            {
-                Serial.println("Verification failed! Trying again...");
-            }
-            delay(500);
+        Serial.println("Verifying...");
+        if (twiboot.Verify(_prog, _len)) // verify the program
+        {
+            verify = true;
+            Serial.println("Verified!");
+            Serial.println("All done, going to the app now!");
+            twiboot.JumpToApp();
         }
+        else
+        {
+            Serial.println("Verification failed! Trying again...");
+        }
+        delay(500);
+    }
+    if(!Wire.isEnabled()){
+        Wire.begin();
     }
 }
