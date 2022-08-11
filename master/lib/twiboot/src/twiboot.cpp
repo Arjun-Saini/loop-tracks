@@ -2,209 +2,251 @@
 #include "twiboot.h"
 #include "crc.h"
 
-inline void startWire()
-{
-    if (!Wire.isEnabled())
-    {
-        Wire.begin();
-    }
-}
-
-int numPagesInLen(int len)
-{
-    if (len % PAGE_SIZE == 0)
-    {
-        return len / PAGE_SIZE;
-    }
-    else
-    {
-        return (len / PAGE_SIZE) + 1;
-    }
-}
-
 Twiboot::Twiboot()
 {
+    START_WIRE;
     this->addr = 0x29;
-    startWire();
 }
 
 Twiboot::Twiboot(uint8_t address)
 {
+    START_WIRE;
     this->addr = address;
-    startWire();
 }
 
-bool Twiboot::AbortBootTimeout()
+bool Twiboot::Init()
 {
-    startWire();
+    START_WIRE;
 
-    Wire.beginTransmission(addr);
-    Wire.write(0x00);
-    return Wire.endTransmission() == 0; // if there are any errors, return false. Otherwise, return true.
+    uint8_t *pgsz = &this->page_size;
+
+    WITH_LOCK(Wire)
+    {
+        Wire.beginTransmission(addr);
+        Wire.write(0x00);
+        if (Wire.endTransmission() != 0) // if there are any errors, return false. Otherwise, return true.
+            return false;
+    }
+
+    return GetChipInfo(nullptr, pgsz, nullptr, nullptr);
 }
 
-void Twiboot::GetBootloaderVersion(char *buf)
+bool Twiboot::GetBootloaderVersion(char *buf)
 {
-    startWire();
-    Wire.beginTransmission(addr);
-    Wire.write(0x01);
-    Wire.endTransmission();
-    Wire.requestFrom(addr, 16);
     int i = 0;
-    while (Wire.available())
+
+    WITH_LOCK(Wire)
     {
-        buf[i] = Wire.read();
-        i++;
+        Wire.beginTransmission(addr);
+        Wire.write(0x01);
+
+        if (Wire.endTransmission() != 0) // if there are any errors, return false. Otherwise, return true.
+            return false;
+
+        Wire.requestFrom(addr, 16);
+        while (Wire.available())
+        {
+            buf[i] = Wire.read();
+            i++;
+        }
     }
+
+    return i == 16;
 }
 
-void Twiboot::GetChipInfo(uint64_t *signature, uint8_t *pageSize, uint16_t *flashSize, uint16_t *eepromSize)
+bool Twiboot::GetChipInfo(uint64_t *signature, uint8_t *pageSize, uint16_t *flashSize, uint16_t *eepromSize)
 {
-    startWire();
-    Wire.beginTransmission(addr);
-    Wire.write(0x02);
-    Wire.write(0x00);
-    Wire.write(0x00);
-    Wire.write(0x00);
-    Wire.endTransmission();
-    Wire.requestFrom(addr, 8);
-    while (!Wire.available())
-        ;
-    *signature = Wire.read() << 16;
-    *signature |= Wire.read() << 8;
-    *signature |= Wire.read();
-    *pageSize = Wire.read();
-    *flashSize = Wire.read() << 8;
-    *flashSize |= Wire.read();
-    *eepromSize = Wire.read() << 8;
-    *eepromSize |= Wire.read();
-}
-
-void Twiboot::ReadFlashPage(uint16_t page, uint8_t *buf)
-{
-    startWire();
-    Wire.beginTransmission(addr);
-    Wire.write(0x02);
-    Wire.write(0x01);
-    Wire.write((page * PAGE_SIZE) >> 8 & 0xFF);
-    Wire.write((page * PAGE_SIZE) & 0xFF);
-    Wire.endTransmission();
-    Wire.requestFrom(addr, PAGE_SIZE);
-
-    for (int i = 0; i < PAGE_SIZE; i++)
+    WITH_LOCK(Wire)
     {
-        buf[i] = Wire.read();
+        Wire.beginTransmission(addr);
+        Wire.write(0x02);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+
+        if (Wire.endTransmission() != 0) // if there are any errors, return false. Otherwise, return true.
+            return false;
+
+        Wire.requestFrom(addr, 8);
+        while (!Wire.available())
+            ;
+        *signature = Wire.read() << 16;
+        *signature |= Wire.read() << 8;
+        *signature |= Wire.read();
+        *pageSize = Wire.read();
+        *flashSize = Wire.read() << 8;
+        *flashSize |= Wire.read();
+        *eepromSize = Wire.read() << 8;
+        *eepromSize |= Wire.read();
     }
+
+    return true;
 }
 
 // uint8_t Twiboot::ReadEEPROMByte(uint16_t addr)
 // {
-//     startWire();
-//     Wire.beginTransmission(addr);
-//     Wire.write(0x02);
-//     Wire.write(0x02);
-//     Wire.write((addr >> 8) & 0xFF);
-//     Wire.write(addr & 0xFF);
-//     Wire.endTransmission();
-//     Wire.requestFrom(addr, 1);
+//     byte tmp[4] = {
+//         0x02,
+//         0x02,
+//         (uint8_t)((addr >> 8) & 0xFF),
+//         (uint8_t)((addr)&0xFF),
+//     };
+
+//     Wire.beginTransmission(this->addr);
+//     Wire.write(tmp, 4);
+//     if (Wire.endTransmission() != 0) // if there are any errors, return false. Otherwise, return true.
+//         return false;
+
+//     Wire.requestFrom(this->addr, 1);
+
+//     while (!Wire.available())
+//         ;
 
 //     return Wire.read();
 // }
 
-// uint8_t Twiboot::WriteEEPROMBytes(uint16_t addr, uint8_t *buf, uint8_t len)
+// bool Twiboot::WriteEEPROM(uint8_t *buf, uint8_t len, uint16_t addr)
 // {
-//     startWire();
-//     Wire.beginTransmission(addr);
-//     Wire.write(0x02);
-//     Wire.write(0x02);
-//     Wire.write(addr >> 8 & 0xFF);
-//     Wire.write(addr & 0xFF);
-//     Wire.write(buf, len);
-//     return Wire.endTransmission();
 
-//     delay(21); // wait for the flash to finish
+//     int numPages = NUM_PAGES_IN(len);
+
+//     for (int i = 0; i < numPages; i++)
+//     {
+//         byte tmp[page_size + 4] = {
+//             0x02,
+//             0x02,
+//             (uint8_t)((addr >> 8) & 0xFF),
+//             (uint8_t)((addr)&0xFF),
+//         };
+
+//         for (int j = 0; (i * page_size + j) < len; j++)
+//         {
+//             tmp[j + 4] = buf[i * page_size + j];
+//         }
+//         Wire.beginTransmission(this->addr);
+//         Wire.write(tmp, page_size + 4);
+//         if (Wire.endTransmission() != 0)
+//             return false;
+
+//         delay(20); // wait for the flash to finish
+//     }
+
+//     return true;
 // }
 
-void Twiboot::WriteFlash(uint8_t *buf, int len, uint16_t page)
+bool Twiboot::ReadFlashPage(uint8_t *buf, uint16_t page)
 {
-    startWire();
-
-    int numPages = numPagesInLen(len);
-
-    for (int i = 0; i < numPages; i++)
+    WITH_LOCK(Wire)
     {
+        byte tmp[4] = {
+            0x02,
+            0x01,
+            (uint8_t)((page * page_size) >> 8 & 0xFF),
+            (uint8_t)((page * page_size) & 0xFF),
+        };
+
         Wire.beginTransmission(addr);
-        Wire.write(0x02);
-        Wire.write(0x01);
-        Wire.write(((i + page) * PAGE_SIZE) >> 8 & 0xFF);
-        Wire.write(((i + page) * PAGE_SIZE) & 0xFF);
+        Wire.write(tmp, 4);
 
-        for (int j = i * PAGE_SIZE; j < (i + 1) * PAGE_SIZE; j++)
-        {
-            if ((i == numPages - 1) && ((len % PAGE_SIZE) != 0) && j >= len)
-            {
-                Wire.write(0xFF);
-            }
-            else
-            {
-                Wire.write(buf[j]);
-            }
-        }
-
-        Wire.endTransmission();
-
-        delay(21); // wait for the flash to finish
-    }
-}
-
-bool Twiboot::Verify(uint8_t *buf, int len, uint16_t page)
-{
-    for (int i = 0; i < numPagesInLen(len); i++)
-    {
-        uint8_t read[PAGE_SIZE];
-        uint8_t tbuf[PAGE_SIZE];
-        startWire();
-        Wire.beginTransmission(addr);
-        Wire.write(0x02);
-        Wire.write(0x01);
-        Wire.write(((i + page) * PAGE_SIZE) >> 8 & 0xFF);
-        Wire.write(((i + page) * PAGE_SIZE) & 0xFF);
-        Wire.endTransmission();
-        Wire.requestFrom(addr, PAGE_SIZE);
-
-        for (int j = 0; j < PAGE_SIZE; j++)
-        {
-
-            while (!Wire.available())
-                ;
-
-            if ((i * PAGE_SIZE + j) >= len)
-            {
-                read[j] = 0xFF;
-                tbuf[j] = 0xFF;
-            }
-            else
-            {
-                read[j] = Wire.read();
-                tbuf[j] = buf[i * PAGE_SIZE + j];
-            }
-        }
-
-        if (crcFast(read, PAGE_SIZE) != crcFast(tbuf, PAGE_SIZE))
-        {
+        if (Wire.endTransmission() != 0) // if there are any errors, return false. Otherwise, return true.
             return false;
+
+        Wire.requestFrom(this->addr, page_size);
+
+        for (int i = 0; i < page_size; i++)
+        {
+            buf[i] = Wire.read();
         }
     }
 
     return true;
 }
 
-void Twiboot::JumpToApp()
+bool Twiboot::WriteFlash(uint8_t *buf, int len, uint16_t page)
 {
-    startWire();
+    int numPages = NUM_PAGES_IN(len);
 
-    Wire.beginTransmission(addr);
-    Wire.write(0x01);
-    Wire.write(0x80);
-    Wire.endTransmission();
+    WITH_LOCK(Wire)
+    {
+
+        for (int i = 0; i < numPages; i++)
+        {
+            byte tmp[page_size + 4] = {
+                0x02,
+                0x01,
+                (uint8_t)((((i + page) * page_size) >> 8) & 0xFF),
+                (uint8_t)(((i + page) * page_size) & 0xFF),
+            };
+
+            for (int j = 0; j < page_size; j++)
+            {
+                if (i * page_size + j < len)
+                {
+                    tmp[j + 4] = buf[i * page_size + j];
+                }
+                else
+                {
+                    tmp[j + 4] = 0xFF;
+                }
+            }
+
+            Wire.beginTransmission(addr);
+            Wire.write(tmp, page_size + 4);
+            if (Wire.endTransmission() != 0)
+                return false;
+
+            delay(20); // wait for the flash to finish
+        }
+    }
+
+    return true;
+}
+
+bool Twiboot::Verify(uint8_t *buf, int len, uint16_t page)
+{
+    WITH_LOCK(Wire)
+    {
+        for (int i = 0; i < NUM_PAGES_IN(len); i++)
+        {
+            uint8_t read[page_size];
+            uint8_t tbuf[page_size];
+
+            if (!ReadFlashPage(read, i + page))
+                return false;
+
+            for (int j = 0; j < page_size; j++)
+            {
+                if ((i * page_size + j) >= len || read[j] == 0xFF)
+                {
+                    tbuf[j] = 0xFF;
+                }
+                else
+                {
+                    tbuf[j] = buf[i * page_size + j];
+                }
+            }
+
+            if (crcFast(read, page_size) != crcFast(tbuf, page_size))
+            {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+bool Twiboot::Exit()
+{
+    WITH_LOCK(Wire)
+    {
+        Wire.beginTransmission(addr);
+        Wire.write(0x01);
+        Wire.write(0x80);
+        if (Wire.endTransmission() != 0)
+            return false;
+        Wire.end();
+    }
+
+    return true;
 }

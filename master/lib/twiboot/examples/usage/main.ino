@@ -4,9 +4,7 @@
 SYSTEM_MODE(MANUAL);
 SYSTEM_THREAD(ENABLED);
 
-#define SLAVE_ADDR 0x30
-
-unsigned char prog[1024] = {
+unsigned char prog[924] = {
     // Offset 0x00000000 to 0x0000039B
     0x0C, 0x94, 0x5C, 0x00, 0x0C, 0x94, 0x6E, 0x00, 0x0C, 0x94, 0x6E, 0x00,
     0x0C, 0x94, 0x6E, 0x00, 0x0C, 0x94, 0x6E, 0x00, 0x0C, 0x94, 0x6E, 0x00,
@@ -86,7 +84,7 @@ unsigned char prog[1024] = {
     0x80, 0xE0, 0x0E, 0x94, 0x70, 0x00, 0x0E, 0x94, 0xDD, 0x00, 0x20, 0x97,
     0xA1, 0xF3, 0x0E, 0x94, 0x00, 0x00, 0xF1, 0xCF, 0xF8, 0x94, 0xFF, 0xCF};
 
-Twiboot twiboot(SLAVE_ADDR); // Initiallize a twiboot object
+Twiboot twiboot; // Initiallize a twiboot object
 
 void setup()
 {
@@ -95,7 +93,7 @@ void setup()
 
 void loop()
 {
-    while (!twiboot.AbortBootTimeout()) // wait for the bootloader to properly initialize
+    while (!twiboot.Init()) // wait for the bootloader to properly initialize
         ;
 
     Serial.println("Bootloader initialized!");
@@ -124,7 +122,7 @@ void loop()
 
     Serial.println("Flashing...");
 
-    twiboot.Flash(prog, sizeof(prog)); // flash the program
+    twiboot.WriteFlash(prog, sizeof(prog)); // flash the program
 
     Serial.println("Flashed!");
 
@@ -133,7 +131,8 @@ void loop()
     {
         Serial.println("Verified!");
         Serial.println("All done, going to the app now!");
-        twiboot.JumpToApp();
+
+        twiboot.Exit();
     }
     else
     {

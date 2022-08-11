@@ -11,7 +11,7 @@ SYSTEM_THREAD(ENABLED);
 #include "twiboot.h"
 
 #define UPDATE_INTERVAL 604800 //seconds between program flashes
-#define DEFAULT_SLAVE_ADR 0x29
+#define DEFAULT_SLAVE_ADR 0x29 //address that all slaves are set to when bootloader starts
 
 //use hexed.it to generate code snippet, upload arduino sketch hex file WITHOUT bootloader
 unsigned char slaveCode[8436] = {
@@ -868,6 +868,8 @@ void callback(char *topic, byte *payload, unsigned int length);
 void alphaDisplay(Adafruit_AlphaNum4 display, String str);
 void flashProg(unsigned char* _prog, unsigned int _len, int _adr);
 
+void proximityThread(void *param);
+
 // const BleUuid serviceUuid("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
 // const BleUuid rxUuid("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
 // const BleUuid txUuid("6E400003-B5A3-F393-E0A9-E50E24DCCA9E");
@@ -934,15 +936,15 @@ void setup()
     orangeLineCTA.setLoopIndex(3, 7);
     purpleLineCTA.setLoopIndex(2, 6);
     pinkLineCTA.setLoopIndex(3, 7);
-    ctaRailways = {blueLineCTA, redLineCTA};
-    //, brownLineCTA, greenLineCTA, orangeLineCTA, pinkLineCTA, purpleLineCTA};
+    ctaRailways = {blueLineCTA};
+    //, redLineCTA, brownLineCTA, greenLineCTA, orangeLineCTA, pinkLineCTA, purpleLineCTA};
 
     // greenLine1 and greenLine2 must be in adxacent in the vector
     mbtaRailways = {redLineMBTA, greenLine1MBTA, greenLine2MBTA, blueLineMBTA, orangeLineMBTA};
 
     // 1 slave per line, except cta green which has 2 and cta purple which has 0 (7 for full cta)
     // there needs to be the same number of rail lines and slaves expected
-    cities = {City(ctaRailways, "cta", 2), City(mbtaRailways, "mbta", 5)};
+    cities = {City(ctaRailways, "cta", 1), City(mbtaRailways, "mbta", 5)};
 
     display1.begin(0x71);
 
@@ -950,6 +952,21 @@ void setup()
     for(int i = 0x08; i <= 0x69; i++){
         flashProg(slaveCode, sizeof(slaveCode), i);
     }
+
+    //TEMPORARY, configures settings without need for app
+    delay(500);
+    cityIndex = 0;
+    railwayIndex = 0;
+    sequenceArr = std::vector<int>(cities[cityIndex].railways.size() * 2, 0);
+    addressArr = std::vector<int>(cities[cityIndex].slaveCountExpected, 0);
+    randomizeAddress();
+    sequenceArr[1] = addressArr[0];
+    userInput = true;
+    WiFi.on();
+    WiFi.connect();
+    //END TEMPORARY
+    
+    new Thread("proximity", proximityThread, NULL, OS_THREAD_PRIORITY_DEFAULT, 1024);
 }
 
 void loop()
@@ -977,19 +994,6 @@ void loop()
         cityIndexBuffer = cityIndex;
         for (unsigned int x = 0; x < cities[cityIndexBuffer].railways.size(); x++)
         {
-
-            // rainbow led on when close proximity
-            uint8_t range = vl.readRange();
-
-            Serial.printlnf("range: %i", range);
-
-            if (range <= 100)
-            {
-                Serial.println("proximity");
-                lightshow(1000);
-                return;
-            }
-
             // MQTT
             if (client.isConnected())
             {
@@ -1037,6 +1041,23 @@ void loop()
 
         Serial.println();
     }
+    delay(100);
+}
+
+void proximityThread(void *param){
+    while(true){
+        Wire.lock();
+
+        // rainbow led on when close proximity
+        uint8_t range = vl.readRange();
+        if (range <= 100)
+        {
+            lightshow(1000);
+        }
+
+        Wire.unlock();
+        delay(100);
+    }
 }
 
 /**
@@ -1046,6 +1067,8 @@ void loop()
  */
 void sendData(int thing, Railway currentRailway)
 {
+    Wire.lock();
+
     // outputs train data to slaves
     // each `i` is a different part of the train data? need to know - Ian
     for (int i = 0; i < 4; i++)
@@ -1173,6 +1196,7 @@ void sendData(int thing, Railway currentRailway)
     }
     Serial.println();
 
+    Wire.unlock();
     delay(1000);
 }
 
@@ -1446,6 +1470,8 @@ int i2cRequestCount = 0;
 // Clears up conflicts with multiple i2c slaves having the same address.
 void randomizeAddress()
 {
+    Wire.lock();
+
     String deviceIDArr[cities[cityIndex].slaveCountExpected];
     while (slaveCount < cities[cityIndex].slaveCountExpected)
     {
@@ -1455,7 +1481,7 @@ void randomizeAddress()
         for (int i = 8; i <= 111; i++)
         {
             i2cRequestCount++;
-            if (i == VL6180X_DEFAULT_I2C_ADDR)
+            if (i == VL6180X_NEW_I2C_ADDR)
             {
                 continue;
             }
@@ -1507,14 +1533,16 @@ void randomizeAddress()
                 }
             }
         }
+
+        Wire.unlock();
     }
 
     Serial.println("\nConnected to: ");
 
     int count = 0;
-    for (int i = 8; i <= 111; i++)
+    for (int i = 0x08; i <= 0x69; i++)
     {
-        if (i == VL6180X_DEFAULT_I2C_ADDR)
+        if (i == VL6180X_NEW_I2C_ADDR)
         {
             continue;
         }
@@ -1541,6 +1569,8 @@ void randomizeAddress()
 // Communication with app, configures city and rail colors.
 void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, void *context)
 {
+    Wire.lock();
+
     txCharacteristic.setValue("ok");
     String inputBuffer = "";
     String nameBuffer;
@@ -1708,6 +1738,8 @@ void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, 
         userInput = false;
         Serial.println("reset done");
     }
+
+    Wire.unlock();
 }
 
 // Increases I2C buffer size
@@ -1729,6 +1761,8 @@ void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, 
  */
 void lightshow(int length)
 {
+    Wire.lock();
+
     for (unsigned int i = 0; i < addressArr.size(); i++)
     {
         Wire.beginTransmission(addressArr[i]);
@@ -1742,35 +1776,51 @@ void lightshow(int length)
         Wire.write('4');
         Wire.endTransmission();
     }
+
+    Wire.unlock();
 }
 
 // MQTT callback for twitter response
 void callback(char *topic, byte *payload, unsigned int length)
 {
+    Wire.lock();
+
     Serial.println("twitter");
     lightshow(3000);
+
+    Wire.unlock();
 }
 
 // Display 4 characters on the display
 void alphaDisplay(Adafruit_AlphaNum4 display, String str)
 {
+    Wire.lock();
+
     for (int i = 0; i < 4; i++)
     {
         display.writeDigitAscii(i, str.charAt(i));
     }
     display.writeDisplay();
+
+    Wire.unlock();
 }
 
 // Flashes program to designed i2c address
 void flashProg(unsigned char* _prog, unsigned int _len, int _addr){
-    if(_addr == VL6180X_DEFAULT_I2C_ADDR || _addr == DEFAULT_SLAVE_ADR){
+    Wire.lock();
+
+    if(_addr == VL6180X_NEW_I2C_ADDR || _addr == DEFAULT_SLAVE_ADR){
+        Wire.unlock();
         return;
     }
 
-    Wire.requestFrom(_addr, 1);
-    if(Wire.available() > 0){
+    Wire.beginTransmission(_addr);
+    int response = Wire.endTransmission();
+    Serial.println(response);
+    if(response == 0){
         Serial.println("device found, starting flash");
     }else{
+        Wire.unlock();
         return;
     }
     Wire.read();
@@ -1830,7 +1880,8 @@ void flashProg(unsigned char* _prog, unsigned int _len, int _addr){
         }
         delay(500);
     }
-    if(!Wire.isEnabled()){
-        Wire.begin();
-    }
+
+    START_WIRE;
+
+    Wire.unlock();
 }
