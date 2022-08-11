@@ -936,7 +936,7 @@ void setup()
     //acquireWireBuffer();
     Wire.setClock(400000);
     Wire.begin();
-    // vl.begin();
+    vl.begin();
 
     // request.hostname = "lapi.transitchicago.com";
     // request.port = 80;
@@ -976,15 +976,12 @@ void setup()
     WiFi.on();
     WiFi.connect();
     //END TEMPORARY
+    
     new Thread("proximity", proximityThread, NULL, OS_THREAD_PRIORITY_DEFAULT, 1024);
 }
 
 void loop()
 {
-    delay(100);
-    Wire.lock();
-    delay(1);
-    Wire.unlock();
     if (WiFi.hasCredentials() && userInput)
     {
         //re-flashes slave code to all slave addresses
@@ -1022,7 +1019,6 @@ void loop()
 
             if (cityIndex == -1)
             {
-                // Wire.unlock();
                 return;
             }
             // request.path = "/api/1.0/ttpositions.aspx?key=00ff09063caa46748434d5fa321d048f&rt=" + String(railways[x].name.c_str()) + "&outputType=JSON";
@@ -1035,7 +1031,6 @@ void loop()
             if (!parser.parse())
             {
                 Serial.println("parsing failed");
-                // Wire.unlock();
                 return;
             }
 
@@ -1057,7 +1052,23 @@ void loop()
 
         Serial.println();
     }
-    // Wire.unlock();
+    delay(100);
+}
+
+void proximityThread(void *param){
+    while(true){
+        Wire.lock();
+
+        // rainbow led on when close proximity
+        uint8_t range = vl.readRange();
+        if (range <= 100)
+        {
+            lightshow(1000);
+        }
+
+        Wire.unlock();
+        delay(100);
+    }
 }
 
 /**
@@ -1540,7 +1551,7 @@ void randomizeAddress()
     Serial.println("\nConnected to: ");
 
     int count = 0;
-    for (int i = 8; i <= 111; i++)
+    for (int i = 0x08; i <= 0x69; i++)
     {
         if (i == VL6180X_NEW_I2C_ADDR)
         {
@@ -1810,13 +1821,17 @@ void flashProg(unsigned char* _prog, unsigned int _len, int _addr){
     Wire.lock();
 
     if(_addr == VL6180X_NEW_I2C_ADDR || _addr == DEFAULT_SLAVE_ADR){
+        Wire.unlock();
         return;
     }
 
-    Wire.requestFrom(_addr, 1);
-    if(Wire.available() > 0){
+    Wire.beginTransmission(_addr);
+    int response = Wire.endTransmission();
+    Serial.println(response);
+    if(response == 0){
         Serial.println("device found, starting flash");
     }else{
+        Wire.unlock();
         return;
     }
     Wire.read();
@@ -1880,21 +1895,4 @@ void flashProg(unsigned char* _prog, unsigned int _len, int _addr){
     START_WIRE;
 
     Wire.unlock();
-}
-
-void proximityThread(void *param){
-    while(true){
-        Wire.lock();
-
-        // rainbow led on when close proximity
-        // uint8_t range = vl.readRange();
-        // if (range <= 100)
-        // {
-        //     lightshow(1000);
-        // }
-
-        Wire.unlock();
-
-        delay(100);
-    }
 }
