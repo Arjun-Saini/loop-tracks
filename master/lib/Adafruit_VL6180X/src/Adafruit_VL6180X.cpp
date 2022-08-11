@@ -55,13 +55,16 @@ boolean Adafruit_VL6180X::begin(TwoWire *theWire) {
   }
   _i2c-> begin();
 
+  loadSettings();
+  write8(0x0212, VL6180X_NEW_I2C_ADDR);
+  _i2caddr = VL6180X_NEW_I2C_ADDR;
 
   if (read8(VL6180X_REG_IDENTIFICATION_MODEL_ID) != 0xB4) {
     return false;
   }
 
   //if (read8(VL6180X_REG_SYSTEM_FRESH_OUT_OF_RESET) == 0x01) {
-    loadSettings();
+    
   //}
 
   write8(VL6180X_REG_SYSTEM_FRESH_OUT_OF_RESET, 0x00);

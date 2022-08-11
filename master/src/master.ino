@@ -934,7 +934,7 @@ void setup()
     orangeLineCTA.setLoopIndex(3, 7);
     purpleLineCTA.setLoopIndex(2, 6);
     pinkLineCTA.setLoopIndex(3, 7);
-    ctaRailways = {blueLineCTA, redLineCTA};
+    ctaRailways = {blueLineCTA};
     //, brownLineCTA, greenLineCTA, orangeLineCTA, pinkLineCTA, purpleLineCTA};
 
     // greenLine1 and greenLine2 must be in adxacent in the vector
@@ -942,7 +942,7 @@ void setup()
 
     // 1 slave per line, except cta green which has 2 and cta purple which has 0 (7 for full cta)
     // there needs to be the same number of rail lines and slaves expected
-    cities = {City(ctaRailways, "cta", 2), City(mbtaRailways, "mbta", 5)};
+    cities = {City(ctaRailways, "cta", 1), City(mbtaRailways, "mbta", 5)};
 
     display1.begin(0x71);
 
@@ -950,6 +950,19 @@ void setup()
     for(int i = 0x08; i <= 0x69; i++){
         flashProg(slaveCode, sizeof(slaveCode), i);
     }
+
+    //TEMPORARY, configures settings without need for app
+    delay(500);
+    cityIndex = 0;
+    railwayIndex = 0;
+    sequenceArr = std::vector<int>(cities[cityIndex].railways.size() * 2, 0);
+    addressArr = std::vector<int>(cities[cityIndex].slaveCountExpected, 0);
+    randomizeAddress();
+    sequenceArr[1] = addressArr[0];
+    userInput = true;
+    WiFi.on();
+    WiFi.connect();
+    //END TEMPORARY
 }
 
 void loop()
@@ -1455,7 +1468,7 @@ void randomizeAddress()
         for (int i = 8; i <= 111; i++)
         {
             i2cRequestCount++;
-            if (i == VL6180X_DEFAULT_I2C_ADDR)
+            if (i == VL6180X_NEW_I2C_ADDR)
             {
                 continue;
             }
@@ -1514,7 +1527,7 @@ void randomizeAddress()
     int count = 0;
     for (int i = 8; i <= 111; i++)
     {
-        if (i == VL6180X_DEFAULT_I2C_ADDR)
+        if (i == VL6180X_NEW_I2C_ADDR)
         {
             continue;
         }
@@ -1763,7 +1776,7 @@ void alphaDisplay(Adafruit_AlphaNum4 display, String str)
 
 // Flashes program to designed i2c address
 void flashProg(unsigned char* _prog, unsigned int _len, int _addr){
-    if(_addr == VL6180X_DEFAULT_I2C_ADDR || _addr == DEFAULT_SLAVE_ADR){
+    if(_addr == VL6180X_NEW_I2C_ADDR || _addr == DEFAULT_SLAVE_ADR){
         return;
     }
 
