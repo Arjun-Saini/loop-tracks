@@ -967,7 +967,6 @@ void setup()
     //TEMPORARY, configures settings without need for app
     delay(500);
     cityIndex = 0;
-    railwayIndex = 0;
     sequenceArr = std::vector<int>(cities[cityIndex].railways.size() * 2, 0);
     addressArr = std::vector<int>(cities[cityIndex].slaveCountExpected, 0);
     randomizeAddress();

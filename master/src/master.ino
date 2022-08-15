@@ -956,7 +956,6 @@ void setup()
     //TEMPORARY, configures settings without need for app
     delay(500);
     cityIndex = 0;
-    railwayIndex = 0;
     sequenceArr = std::vector<int>(cities[cityIndex].railways.size() * 2, 0);
     addressArr = std::vector<int>(cities[cityIndex].slaveCountExpected, 0);
     randomizeAddress();
@@ -1478,7 +1477,7 @@ void randomizeAddress()
         Serial.printlnf("slaveCount: %i", slaveCount);
         slaveCount = 0;
         iterationCount++;
-        for (int i = 8; i <= 111; i++)
+        for (int i = 0x08; i <= 0x69; i++)
         {
             i2cRequestCount++;
             if (i == VL6180X_NEW_I2C_ADDR)
