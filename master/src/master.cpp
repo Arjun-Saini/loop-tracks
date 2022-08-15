@@ -974,6 +974,7 @@ void setup()
     userInput = true;
     WiFi.on();
     WiFi.connect();
+    Particle.connect();
     //END TEMPORARY
     
     new Thread("proximity", proximityThread, NULL, OS_THREAD_PRIORITY_DEFAULT, 1024);
@@ -1488,7 +1489,7 @@ void randomizeAddress()
         Serial.printlnf("slaveCount: %i", slaveCount);
         slaveCount = 0;
         iterationCount++;
-        for (int i = 8; i <= 111; i++)
+        for (int i = 0x08; i <= 0x69; i++)
         {
             i2cRequestCount++;
             if (i == VL6180X_NEW_I2C_ADDR)
@@ -1729,6 +1730,7 @@ void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, 
             userInput = true;
             WiFi.on();
             WiFi.connect();
+            Particle.connect();
             client.connect("sparkclient");
         }
         bleCount++;

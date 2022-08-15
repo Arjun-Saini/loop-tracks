@@ -963,6 +963,7 @@ void setup()
     userInput = true;
     WiFi.on();
     WiFi.connect();
+    Particle.connect();
     //END TEMPORARY
     
     new Thread("proximity", proximityThread, NULL, OS_THREAD_PRIORITY_DEFAULT, 1024);
@@ -1718,6 +1719,7 @@ void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, 
             userInput = true;
             WiFi.on();
             WiFi.connect();
+            Particle.connect();
             client.connect("sparkclient");
         }
         bleCount++;
