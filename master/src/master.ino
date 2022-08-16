@@ -924,7 +924,7 @@ void setup()
     orangeLineCTA.setLoopIndex(3, 7);
     purpleLineCTA.setLoopIndex(2, 6);
     pinkLineCTA.setLoopIndex(3, 7);
-    ctaRailways = {blueLineCTA};
+    ctaRailways = {brownLineCTA};
     //, redLineCTA, brownLineCTA, greenLineCTA, orangeLineCTA, pinkLineCTA, purpleLineCTA};
 
     // greenLine1 and greenLine2 must be in adxacent in the vector
@@ -949,6 +949,7 @@ void setup()
     addressArr = std::vector<int>(cities[cityIndex].slaveCountExpected, 0);
     randomizeAddress();
     sequenceArr[1] = addressArr[0];
+    brownLineCTAAdr = addressArr[0];
     userInput = true;
     WiFi.on();
     WiFi.connect();
@@ -1066,50 +1067,34 @@ void sendData(int thing, Railway currentRailway)
     // each `i` is a different part of the train data? need to know - Ian
     for (int i = 0; i < 4; i++)
     {
+        int adr;
         // sends train color data to slave in preparation for the next set of train data
         if (cityIndexBuffer == 0 && (i == 2 || currentRailway.name == purpleLineCTA.name))
         {
-            Wire.beginTransmission(brownLineCTAAdr);
+            adr = brownLineCTAAdr;
         }
         else if (cityIndexBuffer == 0 && i == 3)
         {
             if (currentRailway.name == orangeLineCTA.name)
             {
-                Wire.beginTransmission(greenLineCTAAdr[0]);
+                adr = greenLineCTAAdr[0];
             }
             else
             {
-                Wire.beginTransmission(greenLineCTAAdr[1]);
+                adr = greenLineCTAAdr[1];
             }
         }
         else
         {
-            Wire.beginTransmission(sequenceArr[thing * 2 + i]);
+            adr = sequenceArr[thing * 2 + i];
         }
 
+        Wire.beginTransmission(adr);
         Wire.write(currentRailway.colors[0].c_str());
         Wire.write(currentRailway.colors[1].c_str());
         Wire.endTransmission();
 
-        if (cityIndexBuffer == 0 && (i == 2 || currentRailway.name == purpleLineCTA.name))
-        {
-            Wire.beginTransmission(brownLineCTAAdr);
-        }
-        else if (cityIndexBuffer == 0 && i == 3)
-        {
-            if (currentRailway.name == orangeLineCTA.name)
-            {
-                Wire.beginTransmission(greenLineCTAAdr[0]);
-            }
-            else
-            {
-                Wire.beginTransmission(greenLineCTAAdr[1]);
-            }
-        }
-        else
-        {
-            Wire.beginTransmission(sequenceArr[thing * 2 + i]); // why this specific address? - Ian
-        }
+        Wire.beginTransmission(adr);
 
         // padding for chicago
         if (cityIndexBuffer == 0)
@@ -1141,15 +1126,6 @@ void sendData(int thing, Railway currentRailway)
                     {
                         Wire.write('0');
                     }
-                }
-            }
-
-            // pads blank loop onto the brown/purple track
-            if (i == 1 && (currentRailway.name == brownLineCTA.name || currentRailway.name == purpleLineCTA.name))
-            {
-                for (unsigned int x = 0; x < currentRailway.outputs[2].size(); x++)
-                {
-                    Wire.write('0');
                 }
             }
 
@@ -1354,7 +1330,6 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
     int pcbSegment;
     float segmentPos;
     bool inLoop = false;
-    // calculates train position within the segment
     if (validTrain)
     {
         // Serial.printlnf("closestIndex: %i second: %i", closestIndex, secondClosestIndex);
@@ -1371,6 +1346,7 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
             upperIndex = closestIndex;
         }
 
+        // calculates train position within the segment
         segmentPos = currentRailway.distances[lowerIndex] / (currentRailway.distances[lowerIndex] + currentRailway.distances[upperIndex]);
         segmentPos *= currentRailway.scalers[lowerIndex];
 
@@ -1378,8 +1354,8 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
         // in green
         if (closestIndex <= currentRailway.upperGreenBound && closestIndex >= currentRailway.lowerGreenBound && secondClosestIndex <= currentRailway.upperGreenBound && secondClosestIndex >= currentRailway.lowerGreenBound)
         {
-            pcbSegment = 3;
             lowerScaleBound = currentRailway.lowerGreenBound;
+            pcbSegment = 3;
         }
         // before loop
         else if (closestIndex < currentRailway.lowerLoopBound || secondClosestIndex < currentRailway.lowerLoopBound)
