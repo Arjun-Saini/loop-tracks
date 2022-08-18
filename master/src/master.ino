@@ -10,8 +10,18 @@ SYSTEM_THREAD(ENABLED);
 #include "Adafruit_LEDBackpack_RK.h"
 #include "twiboot.h"
 
-#define UPDATE_INTERVAL 604800 // seconds between program flashes
+#define UPDATE_INTERVAL 604800000 // milliseconds between program flashes
 #define DEFAULT_SLAVE_ADR 0x29 // address that all slaves are set to when bootloader starts
+#define PROXIMITY_THRESHOLD 100 // distance in mm that triggers lightshow
+
+bool parseTrain(int trainIndex, Railway &currentRailway);
+void sendData(int railwayVectorIndex, Railway currentRailway);
+void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, void *context);
+void lightshow(int length);
+void callback(char *topic, byte *payload, unsigned int length);
+void alphaDisplay(Adafruit_AlphaNum4 display, String str);
+void flashProg(unsigned char *_prog, unsigned int _len, int _adr);
+void proximityThread(void *param);
 
 // use hexed.it to generate code snippet, upload arduino sketch hex file WITHOUT bootloader
 unsigned char slaveCode[8436] = {
@@ -728,7 +738,7 @@ no output segment can be 1, 12, or 24 pixels long, causes conflict with slave pr
 
 // Chinatown to North/Clybourn
 Railway redLineCTA = Railway(
-    // checkpoints in order starting at slave position, should be a checkpoint at each bend/turn, no 3 adxacent checkpoints can form an angle smaller than 90 degrees
+    // checkpoints in order starting at slave position, should be a checkpoint at each bend/turn, no 3 adjacent checkpoints can form an angle smaller than 90 degrees
     {Checkpoint(41.853028, -87.63109), Checkpoint(41.9041, -87.628921), Checkpoint(41.903888, -87.639506), Checkpoint(41.913732, -87.652380), Checkpoint(41.9253, -87.65286)},
     {25, 3, 7, 5}, // pixels in between each checkpoint, should have 1 less element than checkpoint vector
     {0, 40, 0, 0}, // size of each output segment: before loop, after loop, in loop, in green
@@ -839,28 +849,11 @@ Railway greenLine2MBTA = Railway{
 std::vector<City> cities;
 std::vector<Railway> ctaRailways, mbtaRailways;
 
-constexpr size_t I2C_BUFFER_SIZE = 512;
+std::vector<int> addressArr;  // i2c addresses in numerical order
+std::vector<int> sequenceArr; // organizes i2c addresses from addressArr to correspond with railway vector
 
 int brownLineCTAAdr = 0;
 int greenLineCTAAdr[2] = {0, 0};
-
-std::vector<int> addressArr;  // i2c addresses in numerical order
-std::vector<int> sequenceArr; // organizes i2c addresses from addressArr
-int slaveCount;
-
-bool parseTrain(int trainIndex, Railway &currentRailway);
-void sendData(int thing, Railway currentRailway);
-void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, void *context);
-void lightshow(int length);
-void callback(char *topic, byte *payload, unsigned int length);
-void alphaDisplay(Adafruit_AlphaNum4 display, String str);
-void flashProg(unsigned char *_prog, unsigned int _len, int _adr);
-
-void proximityThread(void *param);
-
-// const BleUuid serviceUuid("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
-// const BleUuid rxUuid("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
-// const BleUuid txUuid("6E400003-B5A3-F393-E0A9-E50E24DCCA9E");
 
 const BleUuid serviceUuid("a73ba101-8192-4a51-b42d-ae9cd14b14a5");
 const BleUuid rxUuid("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
@@ -869,38 +862,33 @@ const BleUuid txUuid("6E400003-B5A3-F393-E0A9-E50E24DCCA9E");
 BleCharacteristic txCharacteristic("tx", BleCharacteristicProperty::NOTIFY, txUuid, serviceUuid);
 BleCharacteristic rxCharacteristic("rx", BleCharacteristicProperty::WRITE_WO_RSP, rxUuid, serviceUuid, onDataReceived, NULL);
 
-Adafruit_VL6180X vl = Adafruit_VL6180X();
-
 MQTT client("lab.thewcl.com", 1883, callback);
 
+HttpClient http;
 http_header_t headers[] = {
     {"Accept", "/*/"},
     {NULL, NULL}};
-
 http_request_t request;
 http_response_t response;
 
-HttpClient http;
 JsonParserStatic<10000, 1000> parser;
 
 String SSID = "";
 String password = "";
 
 Adafruit_AlphaNum4 display1 = Adafruit_AlphaNum4();
+Adafruit_VL6180X vl = Adafruit_VL6180X();
 
 bool userInput = false;
 
-unsigned int bleCount = 0;
 int cityIndex = -1;
-int railwayIndex = -1;
 int cityIndexBuffer;
 
-time_t lastTime = Time.now();
+uint64_t lastTime;
 
 void setup()
 {
     Serial.begin(9600);
-    delay(1000);
 
     // BLE setup
     BLE.on();
@@ -910,24 +898,24 @@ void setup()
     data.appendServiceUUID(serviceUuid);
     BLE.advertise(&data);
 
-    // acquireWireBuffer();
     Wire.setClock(400000);
     Wire.begin();
+
     vl.begin();
 
-    // request.hostname = "lapi.transitchicago.com";
-    // request.port = 80;
     request.hostname = "trek.thewcl.com";
     request.port = 80;
 
+    // sets checkpoint indexes for the point adjacent to three segments, only necessary for CTA
+    // the first parameter is the checkpoint that is reached first, the second parameter is the checkpoint at the end
     brownLineCTA.setLoopIndex(2, 6);
     orangeLineCTA.setLoopIndex(3, 7);
     purpleLineCTA.setLoopIndex(2, 6);
     pinkLineCTA.setLoopIndex(3, 7);
-    ctaRailways = {brownLineCTA};
-    //, redLineCTA, brownLineCTA, greenLineCTA, orangeLineCTA, pinkLineCTA, purpleLineCTA};
 
-    // greenLine1 and greenLine2 must be in adxacent in the vector
+    ctaRailways = {brownLineCTA, blueLineCTA, redLineCTA, greenLineCTA, orangeLineCTA, pinkLineCTA, purpleLineCTA};
+
+    // greenLine1MBTA and greenLine2MBTA must be in adjacent in the vector
     mbtaRailways = {redLineMBTA, greenLine1MBTA, greenLine2MBTA, blueLineMBTA, orangeLineMBTA};
 
     // 1 slave per line, except cta green which has 2 and cta purple which has 0 (7 for full cta)
@@ -942,7 +930,10 @@ void setup()
         flashProg(slaveCode, sizeof(slaveCode), i);
     }
 
-    // TEMPORARY, configures settings without need for app
+    // TEMPORARY
+    // used for prototyping purposes configures settings without need for app
+    // works when ONE slave is connected and brownLineCTA is at index 0 of ctaRailways
+    // shows the CTA brown/purple line and also all other trains in the loop
     delay(500);
     cityIndex = 0;
     sequenceArr = std::vector<int>(cities[cityIndex].railways.size() * 2, 0);
@@ -951,20 +942,23 @@ void setup()
     sequenceArr[1] = addressArr[0];
     brownLineCTAAdr = addressArr[0];
     userInput = true;
+    WiFi.setCredentials("WCL", "atmega328");
     WiFi.on();
     WiFi.connect();
     Particle.connect();
     // END TEMPORARY
 
     new Thread("proximity", proximityThread, NULL, OS_THREAD_PRIORITY_DEFAULT, 1024);
+    lastTime = System.millis();
 }
 
 void loop()
 {
+    delay(500);
     if (WiFi.hasCredentials() && userInput)
     {
         // re-flashes slave code to all slave addresses
-        if (Time.now() - lastTime > UPDATE_INTERVAL)
+        if (System.millis() - lastTime > UPDATE_INTERVAL)
         {
             for (int i : addressArr)
             {
@@ -973,7 +967,16 @@ void loop()
             lastTime = Time.now();
         }
 
-        Serial.println("loop start");
+        // MQTT reconnect if disconnected
+        if (client.isConnected())
+        {
+            client.subscribe("loop-tracks/twitter");
+            client.loop();
+        }
+        else
+        {
+            client.connect("sparkclient");
+        }
 
         alphaDisplay(display1, "Test");
 
@@ -986,23 +989,7 @@ void loop()
         cityIndexBuffer = cityIndex;
         for (unsigned int x = 0; x < cities[cityIndexBuffer].railways.size(); x++)
         {
-            // MQTT
-            if (client.isConnected())
-            {
-                client.subscribe("loop-tracks/twitter");
-                client.loop();
-                Serial.println("mqtt loop");
-            }
-            else
-            {
-                client.connect("sparkclient");
-            }
-
-            if (cityIndex == -1)
-            {
-                return;
-            }
-            // request.path = "/api/1.0/ttpositions.aspx?key=00ff09063caa46748434d5fa321d048f&rt=" + String(railways[x].name.c_str()) + "&outputType=JSON";
+            // gets data from WCL server
             request.path = "/loop-tracks/" + String(cities[cityIndexBuffer].name.c_str()) + "?lines=" + String(cities[cityIndexBuffer].railways[x].name.c_str());
             http.get(request, response, headers);
 
@@ -1021,11 +1008,10 @@ void loop()
             // loop through each train, loop breaks when all trains have been parsed
             while (true)
             {
-                if (parseTrain(trainIndex, currentRailway))
+                if (parseTrain(trainIndex++, currentRailway))
                 {
                     break;
                 }
-                trainIndex++;
             }
 
             sendData(x, currentRailway);
@@ -1033,7 +1019,6 @@ void loop()
 
         Serial.println();
     }
-    delay(100);
 }
 
 void proximityThread(void *param)
@@ -1044,7 +1029,7 @@ void proximityThread(void *param)
 
         // rainbow led on when close proximity
         uint8_t range = vl.readRange();
-        if (range <= 100)
+        if (range <= PROXIMITY_THRESHOLD)
         {
             lightshow(1000);
         }
@@ -1056,24 +1041,24 @@ void proximityThread(void *param)
 
 /**
  * Sends the data to the slaves
- * @param thing what is this? - Ian
+ * @param railwayVectorIndex Railway index in the Railway vector
  * @param currentRailway The current railway being processed and sent
  */
-void sendData(int thing, Railway currentRailway)
+void sendData(int railwayVectorIndex, Railway currentRailway)
 {
     Wire.lock();
 
     // outputs train data to slaves
-    // each `i` is a different part of the train data? need to know - Ian
     for (int i = 0; i < 4; i++)
     {
         int adr;
-        // sends train color data to slave in preparation for the next set of train data
-        if (cityIndexBuffer == 0 && (i == 2 || currentRailway.name == purpleLineCTA.name))
+
+        // sets the address of the slave to send to for the current rail block
+        if (cities[cityIndexBuffer].name == "cta" && (i == 2 || currentRailway.name == purpleLineCTA.name))
         {
             adr = brownLineCTAAdr;
         }
-        else if (cityIndexBuffer == 0 && i == 3)
+        else if (cities[cityIndexBuffer].name == "cta" && i == 3)
         {
             if (currentRailway.name == orangeLineCTA.name)
             {
@@ -1086,9 +1071,10 @@ void sendData(int thing, Railway currentRailway)
         }
         else
         {
-            adr = sequenceArr[thing * 2 + i];
+            adr = sequenceArr[railwayVectorIndex * 2 + i];
         }
 
+        // sends train color data to slave in preparation for the next set of train data
         Wire.beginTransmission(adr);
         Wire.write(currentRailway.colors[0].c_str());
         Wire.write(currentRailway.colors[1].c_str());
@@ -1096,15 +1082,16 @@ void sendData(int thing, Railway currentRailway)
 
         Wire.beginTransmission(adr);
 
-        // padding for chicago
-        if (cityIndexBuffer == 0)
+        // padding for cta
+        if (cities[cityIndexBuffer].name == "cta")
         {
+            // padding for loop
             if (i == 2)
             {
                 // pads green line sending to loop
                 if (currentRailway.name == greenLineCTA.name)
                 {
-                    for (unsigned int x = 0; x < brownLineCTA.outputs[0].size() + (brownLineCTA.outputs[2].size() / 2); x++) // why brown line and not green line? - Ian
+                    for (unsigned int x = 0; x < brownLineCTA.outputs[0].size() + (brownLineCTA.outputs[2].size() / 2); x++)
                     {
                         Wire.write('0');
                     }
@@ -1129,7 +1116,7 @@ void sendData(int thing, Railway currentRailway)
                 }
             }
 
-            // pad blank green segment onto orange and pink tracks
+            // pad orange line sending to green
             if (i == 3 && currentRailway.name == orangeLineCTA.name)
             {
                 for (unsigned int x = 0; x < greenLineCTA.outputs[0].size() - orangeLineCTA.outputs[3].size(); x++)
@@ -1137,6 +1124,7 @@ void sendData(int thing, Railway currentRailway)
                     Wire.write('0');
                 }
             }
+            // pad pink line sending to green
             else if (i == 3 && currentRailway.name == pinkLineCTA.name)
             {
                 for (unsigned int x = 0; x < greenLineCTA.outputs[0].size() - pinkLineCTA.outputs[3].size(); x++)
@@ -1147,7 +1135,7 @@ void sendData(int thing, Railway currentRailway)
         }
 
         // sends train data to slave
-        Serial.printf("%s rail part %i: ", currentRailway.name.c_str(), i);
+        Serial.printf("%s rail block %i: ", currentRailway.name.c_str(), i);
         for (unsigned int x = 0; x < currentRailway.outputs[i].size(); x++)
         {
             Wire.write((char)currentRailway.outputs[i][x] + '0');
@@ -1177,7 +1165,7 @@ void sendData(int thing, Railway currentRailway)
  */
 bool parseTrain(int trainIndex, Railway &currentRailway)
 {
-    // parse xson data returned from api
+    // parse json data returned from api
     JsonReference train = parser.getReference().key("lines").index(0).key("trains").index(trainIndex);
     String nextStation = train.key("next_stop").valueString();
     String destNm = train.key("destination").valueString();
@@ -1197,7 +1185,7 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
     std::vector<Checkpoint> currentCheckpoints = currentRailway.checkpoints;
     int checkpointCount = currentCheckpoints.size();
 
-    // finds Index of closest checkpoint to train
+    // finds index of closest checkpoint to train
     for (int i = 0; i < checkpointCount; i++)
     {
         currentRailway.distances[i] = currentCheckpoints[i].getDistance(lat, lon);
@@ -1243,47 +1231,33 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
     bool pointSide, nearestSide, loopPointSide;
     bool validTrain = true;
 
-    // point slope formula to determine which checkpoint is on the other side of the train from the nearest checkpoint
+    // determines which checkpoint is on the other side of the train from the nearest checkpoint
+
+    // checking beginning of track
     if (closestIndex == 0)
     {
         pointSide = (perpendicularSlope * (currentCheckpoints[closestIndex + 1].lat - x) + y) > currentCheckpoints[closestIndex + 1].lon;
         nearestSide = (perpendicularSlope * (currentCheckpoints[closestIndex].lat - x) + y) > currentCheckpoints[closestIndex].lon;
-        if (currentRailway.loopIndex == closestIndex)
+        
+        // train outside of bounds
+        if (pointSide == nearestSide)
         {
-            loopPointSide = (perpendicularSlope * (currentCheckpoints[currentRailway.tripleIndex - 1].lat - x) + y) > currentCheckpoints[currentRailway.tripleIndex - 1].lon;
-            if (nearestSide != pointSide)
-            {
-                secondClosestIndex = 1;
-            }
-            else if (nearestSide != loopPointSide)
-            {
-                closestIndex = currentRailway.tripleIndex;
-                secondClosestIndex = currentRailway.tripleIndex - 1;
-            }
-            else
-            {
-                closestIndex = currentRailway.tripleIndex;
-                secondClosestIndex = currentRailway.tripleIndex + 1;
-            }
+            validTrain = false;
         }
         else
         {
-            if (pointSide == nearestSide)
-            {
-                validTrain = false;
-            }
-            else
-            {
-                secondClosestIndex = 1;
-            }
+            secondClosestIndex = 1;
         }
     }
     else
     {
         pointSide = (perpendicularSlope * (currentCheckpoints[closestIndex - 1].lat - x) + y) > currentCheckpoints[closestIndex - 1].lon;
         nearestSide = (perpendicularSlope * (currentCheckpoints[closestIndex].lat - x) + y) > currentCheckpoints[closestIndex].lon;
+        
+        // checking end of track
         if (closestIndex == checkpointCount - 1)
         {
+            // loop cases
             if (closestIndex == currentRailway.loopIndex)
             {
                 loopPointSide = (perpendicularSlope * (currentCheckpoints[currentRailway.tripleIndex - 1].lat - x) + y) > currentCheckpoints[currentRailway.tripleIndex - 1].lon;
@@ -1314,6 +1288,7 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
                 }
             }
         }
+        //checking middle of track
         else
         {
             if (pointSide == nearestSide)
@@ -1383,11 +1358,11 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
         }
 
         // cta direction fixes
-        if (cityIndexBuffer == 0)
+        if (cities[cityIndexBuffer].name == "cta")
         {
             if (inLoop)
             {
-                // adxusts output array orientation to match brown line
+                // adjusts output array orientation to match brown line
                 if (currentRailway.name == pinkLineCTA.name)
                 {
                     segmentPos = (float)currentRailway.outputs[2].size() - segmentPos;
@@ -1419,7 +1394,7 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
             }
         }
         // mbta direction fixes
-        else if (cityIndexBuffer == 1)
+        else if (cities[cityIndexBuffer].name == "mbta")
         {
             if (currentRailway.name == orangeLineMBTA.name || currentRailway.name == greenLine1MBTA.name || currentRailway.name == redLineMBTA.name)
             {
@@ -1433,9 +1408,10 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
     return false;
 }
 
-// String *deviceIDArr;
 int iterationCount = 0;
 int i2cRequestCount = 0;
+int slaveCount;
+
 // Clears up conflicts with multiple i2c slaves having the same address.
 void randomizeAddress()
 {
@@ -1535,6 +1511,9 @@ void randomizeAddress()
     // }
 }
 
+unsigned int bleCount = 0;
+int railwayIndex = -1;
+
 // Communication with app, configures city and rail colors.
 void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, void *context)
 {
@@ -1597,7 +1576,7 @@ void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, 
         nameBuffer = inputBuffer;
         if (bleCount < cities[cityIndex].railways.size())
         {
-            if ((cityIndex == 0 || cityIndex == 1) && (inputBuffer == "green1" || inputBuffer == "green2"))
+            if ((cities[cityIndex].name == "cta" || cities[cityIndex].name == "mbta") && (inputBuffer == "green1" || inputBuffer == "green2"))
             {
                 nameBuffer = "green";
             }
@@ -1610,7 +1589,7 @@ void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, 
                 }
             }
 
-            if (cityIndex == 1 && inputBuffer == "green1")
+            if (cities[cityIndex].name == "mbta" && inputBuffer == "green1")
             {
                 railwayIndex--;
             }
@@ -1627,13 +1606,16 @@ void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, 
             for (unsigned int i = 0; i < 2; i++)
             {
                 Serial.printlnf("address: %i", addressArr[bleCount]);
-                if (cities[cityIndex].railways[railwayIndex].outputs[i].size() == 0 || (cityIndex == 0 && cities[cityIndex].railways[railwayIndex].name == purpleLineCTA.name))
+
+                // if the output block is empty or the current line is CTA purple, address is set to 0
+                if (cities[cityIndex].railways[railwayIndex].outputs[i].size() == 0 || (cities[cityIndex].name == "cta" && cities[cityIndex].railways[railwayIndex].name == purpleLineCTA.name))
                 {
                     sequenceArr[2 * railwayIndex + i] = 0;
                 }
                 else
                 {
-                    if (cityIndex == 0 && nameBuffer == "green")
+                    // organizes CTA green lines
+                    if (cities[cityIndex].name == "cta" && nameBuffer == "green")
                     {
                         if (inputBuffer == "green1")
                         {
@@ -1644,11 +1626,13 @@ void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, 
                             sequenceArr[2 * railwayIndex + 1] = addressArr[bleCount];
                         }
                     }
+                    // organizes all other lines
                     else
                     {
                         sequenceArr[2 * railwayIndex + i] = addressArr[bleCount];
                     }
-                    if (cityIndex == 0)
+                    //stores CTA brown and green line address so that other slaves can direct the necessary data to them
+                    if (cities[cityIndex].name == "cta")
                     {
                         if (inputBuffer == String(brownLineCTA.name.c_str()))
                         {
@@ -1711,19 +1695,6 @@ void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, 
 
     Wire.unlock();
 }
-
-// Increases I2C buffer size
-// hal_i2c_config_t acquireWireBuffer()
-// {
-//     hal_i2c_config_t config = {
-//         .size = sizeof(hal_i2c_config_t),
-//         .version = HAL_I2C_CONFIG_VERSION_1,
-//         .rx_buffer = new (std::nothrow) uint8_t[I2C_BUFFER_SIZE],
-//         .rx_buffer_size = I2C_BUFFER_SIZE,
-//         .tx_buffer = new (std::nothrow) uint8_t[I2C_BUFFER_SIZE],
-//         .tx_buffer_size = I2C_BUFFER_SIZE};
-//     return config;
-// }
 
 /**
  * @brief Sends rainbow command to every slave.
