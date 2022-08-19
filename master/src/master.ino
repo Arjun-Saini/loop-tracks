@@ -918,9 +918,13 @@ void setup()
     // greenLine1MBTA and greenLine2MBTA must be in adjacent in the vector
     mbtaRailways = {redLineMBTA, greenLine1MBTA, greenLine2MBTA, blueLineMBTA, orangeLineMBTA};
 
-    // 1 slave per line, except cta green which has 2 and cta purple which has 0 (7 for full cta)
-    // there needs to be the same number of rail lines and slaves expected
+    // there needs to be the same number of rail lines and slaves expected when configuring through the app
+    
+    // TESTING
+    // for testing purposes, the number of slaves for the CTA is set to 1
+    // for actual development this needs to be set back to 7
     cities = {City(ctaRailways, "cta", 1), City(mbtaRailways, "mbta", 5)};
+    // END TESTING
 
     display1.begin(0x71);
 
@@ -930,8 +934,8 @@ void setup()
         flashProg(slaveCode, sizeof(slaveCode), i);
     }
 
-    // TEMPORARY
-    // used for prototyping purposes configures settings without need for app
+    // TESTING
+    // used for prototyping purposes, configures settings without need for app
     // works when ONE slave is connected and brownLineCTA is at index 0 of ctaRailways
     // shows the CTA brown/purple line and also all other trains in the loop
     delay(500);
@@ -946,7 +950,7 @@ void setup()
     WiFi.on();
     WiFi.connect();
     Particle.connect();
-    // END TEMPORARY
+    // END TESTING
 
     new Thread("proximity", proximityThread, NULL, OS_THREAD_PRIORITY_DEFAULT, 1024);
     lastTime = System.millis();
