@@ -14,13 +14,52 @@ SYSTEM_THREAD(ENABLED);
 #define DEFAULT_SLAVE_ADR 0x29    // address that all slaves are set to when bootloader starts
 #define PROXIMITY_THRESHOLD 100   // distance in mm that triggers lightshow
 
+/**
+ * @brief a train from the HTTP API and stores it in the railways array.
+ * @param trainIndex The Index of train in the railway.
+ * @param currentRailway The current railway we are on.
+ * @return true if there are no more trains to parse, false otherwise.
+ */
 bool parseTrain(int trainIndex, Railway &currentRailway);
+
+/**
+ * @brief Sends the data to the slaves
+ * @param railwayVectorIndex Railway index in the Railway vector
+ * @param currentRailway The current railway being processed and sent
+ */
 void sendData(int railwayVectorIndex, Railway currentRailway);
+
+// BLE callback
 void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, void *context);
+
+/**
+ * @brief Sends rainbow command to every slave.
+ * @param length Duration in ms for rainbow to last.
+ */
 void lightshow(int length);
+
+// MQTT callback
 void callback(char *topic, byte *payload, unsigned int length);
+
+/**
+ * @brief Displays 4 character string on 14 segment display
+ * @param display target display
+ * @param str 4 character string
+ */
 void alphaDisplay(Adafruit_AlphaNum4 display, String str);
+
+/**
+ * @brief Flashes program to designed i2c address 
+ * @param _prog program hex array
+ * @param _len size of hex array
+ * @param _adr target address
+ */
 void flashProg(unsigned char *_prog, unsigned int _len, int _adr);
+
+/**
+ * @brief Thread that proximity sensor runs on
+ * @param param 
+ */
 void proximityThread(void *param);
 
 // use hexed.it to generate code snippet, upload arduino sketch hex file WITHOUT bootloader
@@ -1060,11 +1099,6 @@ void proximityThread(void *param)
     }
 }
 
-/**
- * Sends the data to the slaves
- * @param railwayVectorIndex Railway index in the Railway vector
- * @param currentRailway The current railway being processed and sent
- */
 void sendData(int railwayVectorIndex, Railway currentRailway)
 {
     Wire.lock();
@@ -1179,12 +1213,6 @@ void sendData(int railwayVectorIndex, Railway currentRailway)
     delay(1000);
 }
 
-/**
- * Parses a train from the HTTP API and stores it in the railways array.
- * @param trainIndex The Index of train in the railway.
- * @param currentRailway The current railway we are on.
- * @return true if there are no more trains to parse, false otherwise.
- */
 bool parseTrain(int trainIndex, Railway &currentRailway)
 {
     // parse json data returned from api
@@ -1704,10 +1732,6 @@ void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, 
     Wire.unlock();
 }
 
-/**
- * @brief Sends rainbow command to every slave.
- * @param length Duration in ms for rainbow to last.
- */
 void lightshow(int length)
 {
     Wire.lock();
@@ -1740,7 +1764,6 @@ void callback(char *topic, byte *payload, unsigned int length)
     Wire.unlock();
 }
 
-// Display 4 characters on the display
 void alphaDisplay(Adafruit_AlphaNum4 display, String str)
 {
     Wire.lock();
@@ -1754,7 +1777,6 @@ void alphaDisplay(Adafruit_AlphaNum4 display, String str)
     Wire.unlock();
 }
 
-// Flashes program to designed i2c address
 void flashProg(unsigned char *_prog, unsigned int _len, int _addr)
 {
     Wire.lock();
