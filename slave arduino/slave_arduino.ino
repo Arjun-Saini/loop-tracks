@@ -65,6 +65,7 @@ void setup()
     Wire.onRequest(dataRequest);
 
     strip.begin();
+    strip.setBrightness(255);
     strip.clear();
     strip.show();
     pinMode(6, INPUT);
@@ -82,6 +83,8 @@ void loop()
     if (blink)
     {
         rainbow(5);
+    }else{
+        strip.setBrightness(255);
     }
 
     if (!verifyAddress)
@@ -247,6 +250,7 @@ void dataRequest()
 
 void rainbow(uint8_t wait)
 {
+    strip.setBrightness(32);
     uint16_t i, j;
 
     for (j = 0; j < 256; j++)
