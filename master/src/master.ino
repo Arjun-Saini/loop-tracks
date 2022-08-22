@@ -11,8 +11,8 @@ SYSTEM_THREAD(ENABLED);
 #include "twiboot.h"
 
 #define UPDATE_INTERVAL 604800000 // milliseconds between program flashes
-#define DEFAULT_SLAVE_ADR 0x29 // address that all slaves are set to when bootloader starts
-#define PROXIMITY_THRESHOLD 100 // distance in mm that triggers lightshow
+#define DEFAULT_SLAVE_ADR 0x29    // address that all slaves are set to when bootloader starts
+#define PROXIMITY_THRESHOLD 100   // distance in mm that triggers lightshow
 
 bool parseTrain(int trainIndex, Railway &currentRailway);
 void sendData(int railwayVectorIndex, Railway currentRailway);
@@ -919,7 +919,7 @@ void setup()
     mbtaRailways = {redLineMBTA, greenLine1MBTA, greenLine2MBTA, blueLineMBTA, orangeLineMBTA};
 
     // there needs to be the same number of rail lines and slaves expected when configuring through the app
-    
+
     // TESTING
     // for testing purposes, the number of slaves for the CTA is set to 1
     // for actual development this needs to be set back to 7
@@ -1128,6 +1128,7 @@ void sendData(int railwayVectorIndex, Railway currentRailway)
                     Wire.write('0');
                 }
             }
+
             // pad pink line sending to green
             else if (i == 3 && currentRailway.name == pinkLineCTA.name)
             {
@@ -1232,83 +1233,66 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
         perpendicularSlope = -1 / slope;
     }
 
+    // determines which checkpoint is on the other side of the train from the nearest checkpoint
     bool pointSide, nearestSide, loopPointSide;
     bool validTrain = true;
+    int checkIndex = -1;
 
-    // determines which checkpoint is on the other side of the train from the nearest checkpoint
-
-    // checking beginning of track
     if (closestIndex == 0)
     {
-        pointSide = (perpendicularSlope * (currentCheckpoints[closestIndex + 1].lat - x) + y) > currentCheckpoints[closestIndex + 1].lon;
-        nearestSide = (perpendicularSlope * (currentCheckpoints[closestIndex].lat - x) + y) > currentCheckpoints[closestIndex].lon;
-        
-        // train outside of bounds
-        if (pointSide == nearestSide)
+        checkIndex = 1;
+    }
+
+    // inequality using point slope formula, nearestSide refers to the side closestCheckpoint is on and pointSide refers to the side that the checkpoint being checked is on
+    nearestSide = (perpendicularSlope * (currentCheckpoints[closestIndex].lat - x) + y) > currentCheckpoints[closestIndex].lon;
+    pointSide = (perpendicularSlope * (currentCheckpoints[closestIndex + checkIndex].lat - x) + y) > currentCheckpoints[closestIndex + checkIndex].lon;
+
+    // loop cases
+    if (closestIndex == currentRailway.loopIndex)
+    {
+        // loopPointSide refers to the side that the checkpoint before the loop is on
+        loopPointSide = (perpendicularSlope * (currentCheckpoints[currentRailway.tripleIndex + checkIndex].lat - x) + y) > currentCheckpoints[currentRailway.tripleIndex + checkIndex].lon;
+
+        // train is between last checkpoint and second to last checkpoint
+        if (nearestSide != pointSide)
         {
-            validTrain = false;
+            secondClosestIndex = closestIndex + checkIndex;
         }
+        // train is between checkpoint before entering the loop and the first checkpoint in the loop
+        else if (nearestSide != loopPointSide)
+        {
+            closestIndex = currentRailway.tripleIndex;
+            secondClosestIndex = currentRailway.tripleIndex + checkIndex;
+        }
+        // train is between the first checkpoint in the loop and the second checkpoint in the loop
         else
         {
-            secondClosestIndex = 1;
+            closestIndex = currentRailway.tripleIndex;
+            secondClosestIndex = currentRailway.tripleIndex - checkIndex;
         }
     }
+    // train is out of bounds of first and last checkpoints
+    else if ((closestIndex == 0 || closestIndex == checkpointCount - 1) && pointSide == nearestSide)
+    {
+        validTrain = false;
+    }
+    // train is in bounds
     else
     {
-        pointSide = (perpendicularSlope * (currentCheckpoints[closestIndex - 1].lat - x) + y) > currentCheckpoints[closestIndex - 1].lon;
-        nearestSide = (perpendicularSlope * (currentCheckpoints[closestIndex].lat - x) + y) > currentCheckpoints[closestIndex].lon;
-        
-        // checking end of track
-        if (closestIndex == checkpointCount - 1)
+        // train is between closest checkpoint and checking checkpoint
+        if (pointSide != nearestSide)
         {
-            // loop cases
-            if (closestIndex == currentRailway.loopIndex)
-            {
-                loopPointSide = (perpendicularSlope * (currentCheckpoints[currentRailway.tripleIndex - 1].lat - x) + y) > currentCheckpoints[currentRailway.tripleIndex - 1].lon;
-                if (nearestSide != pointSide)
-                {
-                    secondClosestIndex = checkpointCount - 2;
-                }
-                else if (nearestSide != loopPointSide)
-                {
-                    closestIndex = currentRailway.tripleIndex;
-                    secondClosestIndex = currentRailway.tripleIndex - 1;
-                }
-                else
-                {
-                    closestIndex = currentRailway.tripleIndex;
-                    secondClosestIndex = currentRailway.tripleIndex + 1;
-                }
-            }
-            else
-            {
-                if (pointSide == nearestSide)
-                {
-                    validTrain = false;
-                }
-                else
-                {
-                    secondClosestIndex = checkpointCount - 2;
-                }
-            }
+            secondClosestIndex = closestIndex + checkIndex;
         }
-        //checking middle of track
+        // train is between closest checkpoint and checkpoint on the other side of the checking checkpoint
         else
         {
-            if (pointSide == nearestSide)
-            {
-                secondClosestIndex = closestIndex + 1;
-            }
-            else
-            {
-                secondClosestIndex = closestIndex - 1;
-            }
+            secondClosestIndex = closestIndex - checkIndex;
         }
     }
 
     int pcbSegment;
     float segmentPos;
-    bool inLoop = false;
     if (validTrain)
     {
         // Serial.printlnf("closestIndex: %i second: %i", closestIndex, secondClosestIndex);
@@ -1351,7 +1335,6 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
         // in loop
         else
         {
-            inLoop = true;
             lowerScaleBound = currentRailway.lowerLoopBound;
             pcbSegment = 2;
         }
@@ -1364,9 +1347,9 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
         // cta direction fixes
         if (cities[cityIndexBuffer].name == "cta")
         {
-            if (inLoop)
+            // adjusts output array orientation when sending to the loop to match brown line
+            if (pcbSegment == 2)
             {
-                // adjusts output array orientation to match brown line
                 if (currentRailway.name == pinkLineCTA.name)
                 {
                     segmentPos = (float)currentRailway.outputs[2].size() - segmentPos;
@@ -1380,6 +1363,7 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
                     trainDir = 1;
                 }
             }
+            // flip brown and purple line direction
             else
             {
                 if (currentRailway.name == brownLineCTA.name || currentRailway.name == purpleLineCTA.name)
@@ -1387,11 +1371,13 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
                     trainDir = 6 - trainDir;
                 }
             }
+            // flip west green line position and direction
             if (pcbSegment == 1 && currentRailway.name == greenLineCTA.name)
             {
                 segmentPos = (float)currentRailway.outputs[1].size() - segmentPos;
                 trainDir = 6 - trainDir;
             }
+            // flip pink line direction when merging with green
             if (pcbSegment == 3 && currentRailway.name == pinkLineCTA.name)
             {
                 trainDir = 6 - trainDir;
@@ -1400,6 +1386,7 @@ bool parseTrain(int trainIndex, Railway &currentRailway)
         // mbta direction fixes
         else if (cities[cityIndexBuffer].name == "mbta")
         {
+            // flip orange, green1, and red line directions
             if (currentRailway.name == orangeLineMBTA.name || currentRailway.name == greenLine1MBTA.name || currentRailway.name == redLineMBTA.name)
             {
                 trainDir = 6 - trainDir;
@@ -1635,7 +1622,7 @@ void onDataReceived(const uint8_t *data, size_t len, const BlePeerDevice &peer, 
                     {
                         sequenceArr[2 * railwayIndex + i] = addressArr[bleCount];
                     }
-                    //stores CTA brown and green line address so that other slaves can direct the necessary data to them
+                    // stores CTA brown and green line address so that other slaves can direct the necessary data to them
                     if (cities[cityIndex].name == "cta")
                     {
                         if (inputBuffer == String(brownLineCTA.name.c_str()))
