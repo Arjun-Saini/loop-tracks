@@ -1,4 +1,7 @@
 {
+    "sketch": "slave_arduino.ino",
+    "output": "build",
     "board": "arduino:avr:uno",
-    "sketch": "src/slave.ino"
+    "programmer": "arduino:avrisp",
+    "port": "/dev/tty.usbmodem144201"
 }
