@@ -5,7 +5,7 @@ The server and UI for this project can be found at [loop-tracks-server](https://
 
 ## PCB Design
 
-PCB project files for each track component, designed with [KiCad 6.0.7](https://www.kicad.org/)
+PCB project files for each track component, designed with [KiCad 6](https://www.kicad.org/)
 
 ## master
 
@@ -13,4 +13,4 @@ Master I2C device, code written for a [Particle Argon](https://docs.particle.io/
 
 ## slave
 
-Slave I2C devices, code written for an [ATMEGA328p](https://www.microchip.com/en-us/product/ATmega328).
+Slave I2C devices, code written for an [ATmega328p](https://www.microchip.com/en-us/product/ATmega328).
