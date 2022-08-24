@@ -70,6 +70,6 @@
         "*.tcc": "cpp"
     },
     "particle.targetPlatform": "argon",
-    "particle.firmwareVersion": "5.0.0-alpha.2",
+    "particle.firmwareVersion": "5.0.0",
     "particle.targetDevice": ""
 }
