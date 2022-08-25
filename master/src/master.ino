@@ -1117,7 +1117,7 @@ void proximityThread(void *param)
         }
 
         Wire.unlock();
-        delay(100);
+        // delay(100);
     }
 }
 

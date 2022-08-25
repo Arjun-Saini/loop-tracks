@@ -1069,7 +1069,7 @@ void loop()
             alphaDisplay(d3, "KDZI");
             alphaDisplay(d4, "PLSK");
             alphaDisplay(d5, "KDZI");
-            alphaDisplay(d6, "CRMK");
+            alphaDisplay(d6, "HLST");
             alphaDisplay(d7, "CRMK");
         }
 
@@ -1128,7 +1128,7 @@ void proximityThread(void *param)
         }
 
         Wire.unlock();
-        delay(100);
+        // delay(100);
     }
 }
 
