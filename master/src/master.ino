@@ -932,7 +932,14 @@ JsonParserStatic<10000, 1000> parser;
 String SSID = "";
 String password = "";
 
-Adafruit_AlphaNum4 display1 = Adafruit_AlphaNum4();
+Adafruit_AlphaNum4 d1 = Adafruit_AlphaNum4();
+Adafruit_AlphaNum4 d2 = Adafruit_AlphaNum4();
+Adafruit_AlphaNum4 d3 = Adafruit_AlphaNum4();
+Adafruit_AlphaNum4 d4 = Adafruit_AlphaNum4();
+Adafruit_AlphaNum4 d5 = Adafruit_AlphaNum4();
+Adafruit_AlphaNum4 d6 = Adafruit_AlphaNum4();
+Adafruit_AlphaNum4 d7 = Adafruit_AlphaNum4();
+
 Adafruit_VL6180X vl = Adafruit_VL6180X();
 
 bool userInput = false;
@@ -982,7 +989,13 @@ void setup()
     cities = {City(ctaRailways, "cta", 1), City(mbtaRailways, "mbta", 5)};
     // END TESTING
 
-    display1.begin(0x71);
+    d1.begin(0x70);
+    d2.begin(0x71);
+    d3.begin(0x72);
+    d4.begin(0x73);
+    d5.begin(0x74);
+    d6.begin(0x75);
+    d7.begin(0x76);
 
     // flashes slave code to every address
     for (int i = 0x08; i <= 0x69; i++)
@@ -1038,7 +1051,16 @@ void loop()
             client.connect("sparkclient");
         }
 
-        alphaDisplay(display1, "Test");
+        // dislay text on 14-segment displays
+        if(cityIndex == 0){
+            alphaDisplay(d1, "OHRE");
+            alphaDisplay(d2, "HWRD");
+            alphaDisplay(d3, "KDZI");
+            alphaDisplay(d4, "PLSK");
+            alphaDisplay(d5, "KDZI");
+            alphaDisplay(d6, "HLST");
+            alphaDisplay(d7, "CRMK");
+        }
 
         for (int i : sequenceArr)
         {
