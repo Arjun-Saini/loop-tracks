@@ -5,11 +5,11 @@ The server and UI for this project can be found at [loop-tracks-server](https://
 
 ## PCB Design
 
-PCB project files for each track component, designed with [KiCad 6](https://www.kicad.org/)
+PCB project files for each track component, designed with [KiCad 6](https://www.kicad.org/).
 
 ## master
 
-Master I2C device, code written for a [Particle Argon](https://docs.particle.io/argon/) using DeviceOS 5.0.0-alpha.2.
+Master I2C device, code written for a [Particle Argon](https://docs.particle.io/argon/) using DeviceOS 5.0.0.
 
 ## slave
 
