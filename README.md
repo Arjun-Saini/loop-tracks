@@ -3,6 +3,10 @@
 This is the main repository for the loop-tracks project.
 The server and UI for this project can be found at [loop-tracks-server](https://github.com/cogsandsquigs/loop-tracks-server) and [loop-tracks-ui](https://github.com/cogsandsquigs/loop-tracks-ui). Full documentation and other information for the project located [here](https://arjun-saini.notion.site/arjun-saini/Loop-Tracks-0d7150e50bd84f2c9db64b674ca986d8).
 
+## images and diagrams
+
+Images and diagrams used in the notion page.
+
 ## PCB Design
 
 PCB project files for each track component, designed with [KiCad 6](https://www.kicad.org/).
