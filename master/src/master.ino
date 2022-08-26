@@ -1097,6 +1097,7 @@ void loop()
             }
 
             sendData(x, currentRailway);
+            delay(1000);
         }
 
         Serial.println();
@@ -1232,7 +1233,6 @@ void sendData(int railwayVectorIndex, Railway currentRailway)
     Serial.println();
 
     Wire.unlock();
-    delay(1000);
 }
 
 bool parseTrain(int trainIndex, Railway &currentRailway)
